@@ -1,0 +1,43 @@
+"""Auto-target selection based on game state (higher_plane and plane_counter)."""
+
+
+def get_current_auto_target(instance):
+    """
+    Determine current target based on higher_plane and plane_counter state values.
+    
+    The game has multiple climbing sequences that cycle through targets based on:
+    - higher_plane: Boolean indicating whether player is on a raised platform (1) or ground level (0)
+    - plane_counter: Counter indicating position within the raised platform sequence
+    
+    Target mapping:
+    - higher_plane=0: 'ladder' (ground level)
+    - higher_plane=1, counter=4: 'tightrope'
+    - higher_plane=1, counter=3: 'tightrope2'
+    - higher_plane=1, counter=2: 'rope'
+    - higher_plane=1, counter=1: 'ladder2'
+    - higher_plane=1, counter=0: 'zipline'
+    
+    Args:
+        instance: Instance with state_tracking, higher_plane, and plane_counter attributes
+    
+    Returns:
+        Target name string or None if unable to determine target
+    """
+    if not instance.state_tracking:
+        return None
+        
+    if instance.higher_plane == 0:
+        return "ladder"
+    elif instance.higher_plane == 1:
+        if instance.plane_counter == 4:
+            return "tightrope"
+        elif instance.plane_counter == 3:
+            return "tightrope2"
+        elif instance.plane_counter == 2:
+            return "rope"
+        elif instance.plane_counter == 1:
+            return "ladder2"
+        elif instance.plane_counter == 0:
+            return "zipline"
+    
+    return None
