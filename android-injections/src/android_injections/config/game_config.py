@@ -41,6 +41,7 @@ class GameConfig:
         self.passing_distance = kwargs.get('passing_distance', 50)
         self.pass_pause_duration = kwargs.get('pass_pause_duration', 3.0)
         self.counter_stability_timer = kwargs.get('counter_stability_timer', 2.0)
+        self.counter_tolerance = kwargs.get('counter_tolerance', 50)
         
         # Timeout settings
         self.auto_target_timeout = kwargs.get('auto_target_timeout', 10.0)
@@ -52,7 +53,7 @@ class GameConfig:
         
         # Plane detection
         self.plane_size = kwargs.get('plane_size', 5)
-        self.minimap_counter_padding = kwargs.get('minimap_counter_padding', 10)
+        self.minimap_counter_padding = kwargs.get('minimap_counter_padding', 7)
         
         # XP detection
         self.xp_brightness_threshold = kwargs.get('xp_brightness_threshold', 170)

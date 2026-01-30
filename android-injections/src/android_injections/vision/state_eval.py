@@ -113,94 +113,112 @@ def evaluate_state_fields(instance, frame):
                         except Exception as e:
                             print(f"XP OCR error: {e}")
                     break
-            
-            # Check for black square in minimap bounds for higher plane detection
-            # Use same sampling rate as XP
-            for bound in instance.bounds_with_names:
-                if len(bound) == 5 and bound[4] == 'minimap':
-                    x1, y1, x2, y2, name = bound
-                    minimap_region = frame[y1:y2, x1:x2]
-                    if minimap_region.size > 0:
-                        try:
-                            # Check for contiguous black squares (0,0,0)
-                            # Create mask of black pixels
-                            black_mask = np.all(minimap_region == [0, 0, 0], axis=2).astype(np.uint8)
-                            
-                            # Use morphological operations to find connected regions
-                            kernel = np.ones((instance.plane_size, instance.plane_size), np.uint8)
-                            eroded = cv2.erode(black_mask, kernel, iterations=1)
-                            
-                            # If any pixels remain after erosion, there's at least one nxn black square
-                            if np.any(eroded):
-                                instance.higher_plane = True
-                            else:
-                                instance.higher_plane = False
-                        except Exception as e:
-                            instance.higher_plane = False
-                    break
-            
-            # Count distinct pixel groups for minimap_counter target
-            instance.minimap_counter = 0
-            if hasattr(instance, 'target_to_colors') and 'minimap_counter' in instance.target_to_colors:
-                for bound in instance.bounds_with_names:
-                    if len(bound) == 5 and bound[4] == 'minimap':
-                        x1, y1, x2, y2, name = bound
-                        minimap_region = frame[y1:y2, x1:x2]
-                        if minimap_region.size > 0:
-                            try:
-                                # Get colors for minimap_counter target
-                                counter_colors = instance.target_to_colors['minimap_counter']
-                                
-                                # Create mask for matching pixels using vectorized lookup
-                                h, w = minimap_region.shape[:2]
-                                
-                                # Build lookup table for counter colors
-                                counter_lookup = np.zeros((256, 256, 256), dtype=bool)
-                                for b, g, r in counter_colors:
-                                    counter_lookup[b, g, r] = True
-                                
-                                # Use vectorized lookup (much faster than loop)
-                                b, g, r = minimap_region[:, :, 0], minimap_region[:, :, 1], minimap_region[:, :, 2]
-                                mask = counter_lookup[b, g, r].astype(np.uint8) * 255
-                                
-                                # Count non-zero pixels before dilation
-                                pixels_before = np.count_nonzero(mask)
-                                
-                                # Apply dilation to connect pixels within padding distance
-                                if instance.minimap_counter_padding > 0:
-                                    kernel = np.ones((instance.minimap_counter_padding * 2 + 1, instance.minimap_counter_padding * 2 + 1), np.uint8)
-                                    mask = cv2.dilate(mask, kernel, iterations=1)
-                                
-                                # Count non-zero pixels after dilation
-                                pixels_after = np.count_nonzero(mask)
-                                
-                                # Find connected components
-                                num_labels, labels = cv2.connectedComponents(mask)
-                                # Subtract 1 because label 0 is background
-                                new_counter_value = num_labels - 1
-                                
-                                # Debug logging
-                                if pixels_before > 0:
-                                    print(f"[MINIMAP] padding={instance.minimap_counter_padding}, pixels_before={pixels_before}, pixels_after={pixels_after}, components={new_counter_value}")
-                                
-                                # Track stability of minimap_counter value
-                                current_time = time.time()
-                                if instance.minimap_counter_prev_value is not None and new_counter_value == instance.minimap_counter_prev_value:
-                                    # Value unchanged
-                                    if instance.minimap_counter_stable_since is None:
-                                        instance.minimap_counter_stable_since = current_time
-                                else:
-                                    # Value changed, reset stability
-                                    instance.minimap_counter_stable_since = None
-                                
-                                instance.minimap_counter = new_counter_value
-                                instance.minimap_counter_prev_value = new_counter_value
-                            except Exception as e:
-                                instance.minimap_counter = 0
-                                instance.minimap_counter_prev_value = None
-                                instance.minimap_counter_stable_since = None
-                        break
     
+    # Check for black square in minimap bounds for higher plane detection (outside XP block)
+    if hasattr(instance, 'bounds_with_names'):
+        for bound in instance.bounds_with_names:
+            if len(bound) == 5 and bound[4] == 'minimap':
+                x1, y1, x2, y2, name = bound
+                minimap_region = frame[y1:y2, x1:x2]
+                if minimap_region.size > 0:
+                    try:
+                        # Check for contiguous black squares (0,0,0)
+                        # Create mask of black pixels
+                        black_mask = np.all(minimap_region == [0, 0, 0], axis=2).astype(np.uint8)
+                        
+                        # Use morphological operations to find connected regions
+                        kernel = np.ones((instance.plane_size, instance.plane_size), np.uint8)
+                        eroded = cv2.erode(black_mask, kernel, iterations=1)
+                        
+                        # If any pixels remain after erosion, there's at least one nxn black square
+                        if np.any(eroded):
+                            instance.higher_plane = True
+                        else:
+                            instance.higher_plane = False
+                    except Exception as e:
+                        instance.higher_plane = False
+                break
+    
+    # Count distinct pixel groups for minimap_counter target (outside XP block)
+    instance.minimap_counter = 0
+    if hasattr(instance, 'target_to_colors') and 'minimap_counter' in instance.target_to_colors:
+        minimap_bound_found = False
+        for bound in instance.bounds_with_names:
+            if len(bound) == 5 and bound[4] == 'minimap':
+                minimap_bound_found = True
+                x1, y1, x2, y2, name = bound
+                minimap_region = frame[y1:y2, x1:x2]
+                if minimap_region.size > 0:
+                    try:
+                        # Get colors for minimap_counter target
+                        counter_colors = instance.target_to_colors['minimap_counter']
+                        
+                        # Create mask for matching pixels
+                        h, w = minimap_region.shape[:2]
+                        tolerance = getattr(instance.config, 'counter_tolerance', 0)
+                        
+                        if tolerance == 0:
+                            # Use fast lookup table for exact matching
+                            counter_lookup = np.zeros((256, 256, 256), dtype=bool)
+                            for b, g, r in counter_colors:
+                                counter_lookup[b, g, r] = True
+                            
+                            # Use vectorized lookup (much faster than loop)
+                            b, g, r = minimap_region[:, :, 0], minimap_region[:, :, 1], minimap_region[:, :, 2]
+                            mask = counter_lookup[b, g, r].astype(np.uint8) * 255
+                        else:
+                            # Use tolerance-based matching (slower but more flexible)
+                            mask = np.zeros((h, w), dtype=np.uint8)
+                            for target_b, target_g, target_r in counter_colors:
+                                # Calculate color distance for all pixels
+                                b_diff = np.abs(minimap_region[:, :, 0].astype(np.int16) - target_b)
+                                g_diff = np.abs(minimap_region[:, :, 1].astype(np.int16) - target_g)
+                                r_diff = np.abs(minimap_region[:, :, 2].astype(np.int16) - target_r)
+                                
+                                # Mark pixels within tolerance
+                                within_tolerance = (b_diff <= tolerance) & (g_diff <= tolerance) & (r_diff <= tolerance)
+                                mask[within_tolerance] = 255
+                        
+                        # Count non-zero pixels before dilation
+                        pixels_before = np.count_nonzero(mask)
+                        
+                        # Apply dilation to connect pixels within padding distance
+                        if instance.minimap_counter_padding > 0:
+                            kernel = np.ones((instance.minimap_counter_padding * 2 + 1, instance.minimap_counter_padding * 2 + 1), np.uint8)
+                            mask = cv2.dilate(mask, kernel, iterations=1)
+                        
+                        # Count non-zero pixels after dilation
+                        pixels_after = np.count_nonzero(mask)
+                        
+                        # Find connected components
+                        num_labels, labels = cv2.connectedComponents(mask)
+                        # Subtract 1 because label 0 is background
+                        new_counter_value = num_labels - 1
+                        
+                        # Store mask and minimap bounds for visualization
+                        instance.minimap_counter_mask = mask
+                        instance.minimap_counter_bounds = (x1, y1, x2, y2)
+                        
+                        # Track stability of minimap_counter value
+                        current_time = time.time()
+                        if instance.minimap_counter_prev_value is not None and new_counter_value == instance.minimap_counter_prev_value:
+                            # Value unchanged
+                            if instance.minimap_counter_stable_since is None:
+                                instance.minimap_counter_stable_since = current_time
+                        else:
+                            # Value changed, reset stability
+                            instance.minimap_counter_stable_since = None
+                        
+                        instance.minimap_counter = new_counter_value
+                        instance.minimap_counter_prev_value = new_counter_value
+                    except Exception as e:
+                        instance.minimap_counter = 0
+                        instance.minimap_counter_prev_value = None
+                        instance.minimap_counter_stable_since = None
+                break
+        
+        if not minimap_bound_found:
+            pass  # Minimap bound not found
     # Check if we're within 500ms of trigger time
     if instance.xp_trigger_time is not None:
         elapsed = (time.time() - instance.xp_trigger_time) * 1000  # Convert to ms

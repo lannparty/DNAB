@@ -124,8 +124,9 @@ class TestFilterUniqueColors:
         instance.min_blob_pixels = 10
         instance.max_blobs = 0
         instance.benchmark = False
-        instance.target_to_colors = {}
+        instance.target_to_colors = {'test_target': {(255, 0, 0)}}  # Need targets for multi-target mode
         instance.target_bounds = {}
+        instance.manual_target_name = None
         instance.get_current_auto_target = Mock(return_value=None)
         instance.detected_targets = {}
         

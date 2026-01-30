@@ -404,6 +404,7 @@ class QtWindowCapture(WindowCapture):
         self.minimap_counter = 0
         self.minimap_counter_prev_value = None
         self.minimap_counter_stable_since = None
+        self.config.counter_tolerance = 50
         
         # XP tracking (separate from state tracking)
         self.xp_tracking = False
@@ -617,10 +618,7 @@ class QtWindowCapture(WindowCapture):
             
             if self.show_filtered:
                 t_start = time.perf_counter()
-                # Skip scaling during filter if auto mode is on - we only need positions, not display
-                # The final display scaling happens later at line 684 anyway
-                scale_for_filter = 1.0 if self.auto_mode else self.display_scale
-                display_frame = self.filter_unique_colors(frame_bgr.copy(), apply_scale=scale_for_filter)
+                display_frame = self.filter_unique_colors(frame_bgr.copy(), apply_scale=self.display_scale)
                 t_filter = (time.perf_counter() - t_start) * 1000
             else:
                 display_frame = frame_bgr.copy()
@@ -685,6 +683,24 @@ class QtWindowCapture(WindowCapture):
                         cv2.putText(display_frame, target_name, (tx, label_y), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                 t_targets = (time.perf_counter() - t_start) * 1000
+                
+                # Draw minimap counter padding visualization if available
+                t_start = time.perf_counter()
+                if self.state_tracking and hasattr(self, 'minimap_counter_mask') and self.minimap_counter_mask is not None:
+                    x1, y1, x2, y2 = self.minimap_counter_bounds
+                    # Create colored overlay for the dilated mask (cyan with transparency)
+                    mask_overlay = cv2.cvtColor(self.minimap_counter_mask, cv2.COLOR_GRAY2BGR)
+                    mask_overlay[:, :, 0] = self.minimap_counter_mask  # Blue channel
+                    mask_overlay[:, :, 1] = self.minimap_counter_mask  # Green channel
+                    mask_overlay[:, :, 2] = 0  # Red channel (makes it cyan)
+                    
+                    # Blend the overlay onto the display frame
+                    alpha = 0.3  # Transparency
+                    display_frame[y1:y2, x1:x2] = cv2.addWeighted(
+                        display_frame[y1:y2, x1:x2], 1 - alpha,
+                        mask_overlay, alpha, 0
+                    )
+                t_minimap_overlay = (time.perf_counter() - t_start) * 1000
                 
                 # Draw white center dot
                 t_start = time.perf_counter()

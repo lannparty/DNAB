@@ -458,6 +458,38 @@ class MirrorWindow(QMainWindow):
         minimap_row.addWidget(QLabel("s"))
         minimap_row.addWidget(self.counter_stability_plus_btn)
         
+        minimap_row.addSpacing(10)
+        
+        # Counter Tolerance (editable with +/-)
+        minimap_row.addWidget(QLabel("counter\ntolerance"))
+        self.counter_tolerance_minus_btn = self._create_mini_button("-", self.decrease_counter_tolerance)
+        self.counter_tolerance_display = QLabel("50")
+        self.counter_tolerance_display.setMinimumWidth(70)
+        self.counter_tolerance_display.setMaximumWidth(70)
+        self.counter_tolerance_display.setFixedHeight(28)
+        self.counter_tolerance_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.counter_tolerance_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+        self.counter_tolerance_display.setToolTip("Color tolerance for counter detection (0-50)")
+        self.counter_tolerance_display.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.counter_tolerance_display.mouseDoubleClickEvent = lambda e: self.start_field_edit('counter_tolerance', str(self.capture.config.counter_tolerance))
+        self.counter_tolerance_plus_btn = self._create_mini_button("+", self.increase_counter_tolerance)
+        minimap_row.addWidget(self.counter_tolerance_minus_btn)
+        minimap_row.addWidget(self.counter_tolerance_display)
+        minimap_row.addWidget(self.counter_tolerance_plus_btn)
+        
+        minimap_row.addSpacing(10)
+        
+        # Counter Stable Display (read-only countdown, green when 0)
+        minimap_row.addWidget(QLabel("counter\nstable"))
+        self.counter_stable_display = QLabel("0")
+        self.counter_stable_display.setMinimumWidth(70)
+        self.counter_stable_display.setMaximumWidth(70)
+        self.counter_stable_display.setFixedHeight(28)
+        self.counter_stable_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.counter_stable_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+        self.counter_stable_display.setToolTip("Countdown to stable (ms)")
+        minimap_row.addWidget(self.counter_stable_display)
+        
         minimap_row.addStretch()
         
         minimap_row_widget.setLayout(minimap_row)
@@ -1013,6 +1045,33 @@ class MirrorWindow(QMainWindow):
                 counter_stability = getattr(self.capture.config, 'counter_stability_timer', 1.0)
                 self.counter_stability_display.setText(f"{counter_stability:.1f}")
                 self.counter_stability_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+            
+            # Counter tolerance (don't overwrite if editing)
+            if editing_field == 'counter_tolerance':
+                self.counter_tolerance_display.setText(field_temp_input + "_")
+                self.counter_tolerance_display.setStyleSheet(editing_style)
+            else:
+                counter_tolerance = getattr(self.capture.config, 'counter_tolerance', 0)
+                self.counter_tolerance_display.setText(str(counter_tolerance))
+                self.counter_tolerance_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+            
+            # Counter stable countdown display
+            import time
+            if hasattr(self.capture, 'minimap_counter_stable_since') and self.capture.minimap_counter_stable_since is not None:
+                elapsed = time.time() - self.capture.minimap_counter_stable_since
+                remaining_ms = max(0, int((self.capture.config.counter_stability_timer - elapsed) * 1000))
+                self.counter_stable_display.setText(str(remaining_ms))
+                if remaining_ms == 0:
+                    # Fully stable - green background
+                    self.counter_stable_display.setStyleSheet("background-color: #4ade80; padding: 5px 10px; border: 1px solid #22c55e; border-radius: 3px; color: #000; font-weight: 600;")
+                else:
+                    # Counting down - normal background
+                    self.counter_stable_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+            else:
+                # Not stable yet - show full timer value
+                timer_ms = int(self.capture.config.counter_stability_timer * 1000)
+                self.counter_stable_display.setText(str(timer_ms))
+                self.counter_stable_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
         else:
             # State tracking is off, but still update editable fields if being edited
             if editing_field == 'plane_size':
@@ -1038,6 +1097,15 @@ class MirrorWindow(QMainWindow):
                 counter_stability = getattr(self.capture.config, 'counter_stability_timer', 1.0)
                 self.counter_stability_display.setText(f"{counter_stability:.1f}")
                 self.counter_stability_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
+            
+            # Counter tolerance (don't overwrite if editing)
+            if editing_field == 'counter_tolerance':
+                self.counter_tolerance_display.setText(field_temp_input + "_")
+                self.counter_tolerance_display.setStyleSheet(editing_style)
+            else:
+                counter_tolerance = getattr(self.capture.config, 'counter_tolerance', 0)
+                self.counter_tolerance_display.setText(str(counter_tolerance))
+                self.counter_tolerance_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
         
         # Update button colors with modern styling
         target_color = "#10b981" if self.capture.target_mode else "#2d2d2d"
@@ -1284,6 +1352,14 @@ class MirrorWindow(QMainWindow):
         """Decrease counter stability timer by 0.1s."""
         self.capture.config.counter_stability_timer = max(self.capture.config.counter_stability_timer - 0.1, 0.1)
     
+    def increase_counter_tolerance(self):
+        """Increase counter tolerance by 1."""
+        self.capture.config.counter_tolerance = min(self.capture.config.counter_tolerance + 1, 50)
+    
+    def decrease_counter_tolerance(self):
+        """Decrease counter tolerance by 1."""
+        self.capture.config.counter_tolerance = max(self.capture.config.counter_tolerance - 1, 0)
+    
     def start_field_edit(self, field_name, current_value):
         """Start inline text editing for a field."""
         self.capture.editing_field = field_name
@@ -1324,6 +1400,12 @@ class MirrorWindow(QMainWindow):
                                               "Timer (seconds):", current, 0.1, 10.0, 1)
             if ok:
                 self.capture.config.counter_stability_timer = value
+        elif field_name == 'counter_tolerance':
+            current = self.capture.config.counter_tolerance
+            value, ok = QInputDialog.getInt(self, "Edit Counter Tolerance", 
+                                           "Tolerance (0-50):", current, 0, 50)
+            if ok:
+                self.capture.config.counter_tolerance = value
     
     def edit_config_field(self, field_name):
         """Edit configuration field values via dialog."""
