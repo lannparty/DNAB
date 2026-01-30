@@ -75,14 +75,31 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
     if not hasattr(instance, 'filter_colors') or not instance.filter_colors:
         return frame
     
-    # If auto view mode is on, filter to show only current auto target
+    # Determine which colors to filter for
     active_colors = instance.filter_colors
-    if instance.auto_view_mode:
-        current_target = instance.get_current_auto_target()
-        if current_target and hasattr(instance, 'target_to_colors') and current_target in instance.target_to_colors:
-            active_colors = instance.target_to_colors[current_target]
+    
+    # If manual target is selected (via +/- buttons), only show that target
+    # BUT: ignore manual target if auto mode is on (auto mode needs all targets detected)
+    use_manual_target = (hasattr(instance, 'manual_target_name') and instance.manual_target_name and
+                        not (hasattr(instance, 'auto_mode') and instance.auto_mode))
+    
+    if use_manual_target:
+        if instance.manual_target_name == 'none':
+            # Special case: 'none' means show nothing
+            black_frame = np.zeros_like(frame)
+            if apply_scale != 1.0:
+                h, w = frame.shape[:2]
+                h_scaled = int(h * apply_scale)
+                w_scaled = int(w * apply_scale)
+                black_frame = cv2.resize(black_frame, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
+            return black_frame
+        elif instance.manual_target_name == 'all':
+            # Special case: 'all' means search all targets (default behavior)
+            active_colors = instance.filter_colors
+        elif hasattr(instance, 'target_to_colors') and instance.manual_target_name in instance.target_to_colors:
+            active_colors = instance.target_to_colors[instance.manual_target_name]
         else:
-            # Target not loaded or not determined, show nothing (scaled to match display)
+            # Manual target not loaded, show nothing
             black_frame = np.zeros_like(frame)
             if apply_scale != 1.0:
                 h, w = frame.shape[:2]
@@ -100,7 +117,8 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
     t1 = time.time()
     
     # Vectorized color matching using lookup table (O(1) per pixel instead of O(N))
-    if instance.color_lookup is None or (instance.auto_view_mode and active_colors != instance.filter_colors):
+    # If manual target is selected, we need to rebuild lookup for that target's colors
+    if instance.color_lookup is None or (hasattr(instance, 'manual_target_name') and instance.manual_target_name and active_colors != instance.filter_colors):
         # Need to create a temporary lookup for active_colors
         temp_lookup = np.zeros((256, 256, 256), dtype=bool)
         for b_val, g_val, r_val in active_colors:
@@ -232,13 +250,23 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
                     blob_center_x = x + w // 2
                     blob_center_y = y + h // 2
                 
-                # If auto view mode is on, only search for current auto target
+                # Determine which target(s) to search for
                 targets_to_check = instance.target_to_colors.items()
-                if hasattr(instance, 'auto_view_mode') and instance.auto_view_mode and hasattr(instance, 'auto_target_list') and instance.auto_target_list:
-                    if hasattr(instance, 'auto_target_index') and instance.auto_target_index < len(instance.auto_target_list):
-                        current_auto_target = instance.auto_target_list[instance.auto_target_index]
-                        if current_auto_target in instance.target_to_colors:
-                            targets_to_check = [(current_auto_target, instance.target_to_colors[current_auto_target])]
+                
+                # If manual target is selected (via +/- buttons), only search for that target
+                if hasattr(instance, 'manual_target_name') and instance.manual_target_name:
+                    # 'all' means search all targets (default behavior)
+                    if instance.manual_target_name == 'all':
+                        targets_to_check = instance.target_to_colors.items()
+                    # 'none' means don't search for any targets (handled earlier, shouldn't reach here)
+                    elif instance.manual_target_name == 'none':
+                        targets_to_check = []
+                    # Specific target selected
+                    elif instance.manual_target_name in instance.target_to_colors:
+                        targets_to_check = [(instance.manual_target_name, instance.target_to_colors[instance.manual_target_name])]
+                    else:
+                        # Unknown target, search nothing
+                        targets_to_check = []
                 
                 for tgt_name, tgt_colors in targets_to_check:
                     # If target has bounds, check if blob center is within bounds
@@ -256,16 +284,16 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
                         best_target = tgt_name
                         best_target_matches = target_match_count
                 
-                # Use best match that satisfied both color and bounds checks
-                if best_target:
-                    target_name = best_target
-                else:
+                # After checking all targets, assign the best match
+                if best_target is None:
                     # If no valid match found, skip this blob entirely
                     continue
-        
-        # Check if this is the largest blob for this target
-            if target_name not in largest_per_target or area > largest_per_target[target_name][1]:
-                largest_per_target[target_name] = (label_idx, area, x, y, w, h)
+                
+                target_name = best_target
+                
+                # Check if this is the largest blob for this target
+                if target_name not in largest_per_target or area > largest_per_target[target_name][1]:
+                    largest_per_target[target_name] = (label_idx, area, x, y, w, h)
         
         t4 = time.time()
         

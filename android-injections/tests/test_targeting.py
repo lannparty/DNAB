@@ -28,7 +28,7 @@ class TestColorAnalysis:
         instance.most_common_unique_color = None
         instance.most_common_count = 0
         
-        from targeting.color_analysis import analyze_unique_colors
+        from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
         
         # Blue color should be unique (only in selection)
@@ -50,7 +50,7 @@ class TestColorAnalysis:
         instance.most_common_unique_color = None
         instance.most_common_count = 0
         
-        from targeting.color_analysis import analyze_unique_colors
+        from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
         
         # No unique colors
@@ -72,7 +72,7 @@ class TestColorAnalysis:
         instance.most_common_unique_color = None
         instance.most_common_count = 0
         
-        from targeting.color_analysis import analyze_unique_colors
+        from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
         
         # Should work despite scaling
@@ -97,7 +97,7 @@ class TestColorAnalysis:
         instance.most_common_unique_color = None
         instance.most_common_count = 0
         
-        from targeting.color_analysis import analyze_unique_colors
+        from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
         
         # Most common unique color should be blue
@@ -137,7 +137,7 @@ class TestTargetLoading:
             instance.target_bounds = {}
             instance.bounds_with_names = []
             
-            from targeting.target_loader import load_all_targets
+            from android_injections.targeting.target_loader import load_all_targets
             load_all_targets(instance)
             
             # Should have loaded the target
@@ -180,7 +180,7 @@ class TestTargetLoading:
             instance.target_bounds = {}
             instance.bounds_with_names = []
             
-            from targeting.target_loader import load_all_targets
+            from android_injections.targeting.target_loader import load_all_targets
             load_all_targets(instance)
             
             # Should have loaded bounds
@@ -216,8 +216,8 @@ class TestTargetSaving:
             instance.target_bounds = {}
             instance.bounds_with_names = []
             
-            from targeting.target_loader import load_all_targets
-            from targeting.target_saver import save_target
+            from android_injections.targeting.target_loader import load_all_targets
+            from android_injections.targeting.target_saver import save_target
             
             save_target(instance)
             
@@ -237,7 +237,7 @@ class TestTargetSaving:
         instance.target_selection_rect = ((10, 10), (50, 50))
         instance.target_name = None
         
-        from targeting.target_saver import save_target
+        from android_injections.targeting.target_saver import save_target
         
         # Should not raise error
         save_target(instance)
@@ -264,7 +264,7 @@ class TestTargetSaving:
             instance.target_bounds = {}
             instance.bounds_with_names = []
             
-            from targeting.target_saver import save_bounds
+            from android_injections.targeting.target_saver import save_bounds
             save_bounds(instance)
             
             # File should exist
@@ -300,7 +300,7 @@ class TestExcludedRegions:
             instance.excluded_regions = []
             instance.excluded_regions_with_names = []
             
-            from targeting.exclusion_manager import load_excluded_regions
+            from android_injections.targeting.exclusion_manager import load_excluded_regions
             load_excluded_regions(instance)
             
             # Should have loaded regions
@@ -322,7 +322,7 @@ class TestExcludedRegions:
             instance.target_name = 'test_exclude'
             instance.display_scale = 1.0
             
-            from targeting.exclusion_manager import save_excluded_region, load_excluded_regions
+            from android_injections.targeting.exclusion_manager import save_excluded_region, load_excluded_regions
             save_excluded_region(instance)
             
             # File should exist
@@ -369,7 +369,7 @@ class TestColorLookupTable:
             instance.bounds_with_names = []
             instance.color_lookup = None
             
-            from targeting.target_loader import load_all_targets
+            from android_injections.targeting.target_loader import load_all_targets
             load_all_targets(instance)
             
             # Lookup table should be created
@@ -423,7 +423,7 @@ class TestUniqueFingerprints:
             instance.target_bounds = {}
             instance.bounds_with_names = []
             
-            from targeting.target_loader import load_all_targets
+            from android_injections.targeting.target_loader import load_all_targets
             load_all_targets(instance)
             
             # Both targets should be loaded

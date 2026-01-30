@@ -1,7 +1,7 @@
 """Tests for keyboard event handler - input processing and field editing."""
 import pytest
 from unittest.mock import Mock
-from ui.keyboard_handler import (
+from android_injections.ui.keyboard_handler import (
     handle_numeric_input,
     handle_text_input,
     process_keyboard_event

@@ -12,7 +12,7 @@ def evaluate_state_fields(instance, frame):
     This function:
     1. Detects XP changes using OCR with Tesseract
     2. Detects higher plane from minimap black square
-    3. Counts distinct color groups for plane counter
+    3. Counts distinct color groups for minimap counter
     4. Tracks state stability and transitions
     
     Args:
@@ -26,10 +26,10 @@ def evaluate_state_fields(instance, frame):
             - xp_brightness_threshold: Manual threshold for OCR
             - higher_plane: Boolean flag for higher plane status
             - plane_size: Kernel size for black square detection
-            - plane_counter: Number of distinct groups in minimap
-            - plane_counter_prev_value: Previous counter value
-            - plane_counter_stable_since: When counter became stable
-            - plane_count_padding: Padding for connecting nearby pixels
+            - minimap_counter: Number of distinct groups in minimap
+            - minimap_counter_prev_value: Previous counter value
+            - minimap_counter_stable_since: When counter became stable
+            - minimap_counter_padding: Padding for connecting nearby pixels
             - stability_timer: Stability check interval
             - target_to_colors: Dict mapping target names to color sets
             - _clahe: CLAHE preprocessor object
@@ -139,7 +139,7 @@ def evaluate_state_fields(instance, frame):
                     break
             
             # Count distinct pixel groups for minimap_counter target
-            instance.plane_counter = 0
+            instance.minimap_counter = 0
             if hasattr(instance, 'target_to_colors') and 'minimap_counter' in instance.target_to_colors:
                 for bound in instance.bounds_with_names:
                     if len(bound) == 5 and bound[4] == 'minimap':
@@ -163,8 +163,8 @@ def evaluate_state_fields(instance, frame):
                                 mask = counter_lookup[b, g, r].astype(np.uint8) * 255
                                 
                                 # Apply dilation to connect pixels within padding distance
-                                if instance.plane_count_padding > 0:
-                                    kernel = np.ones((instance.plane_count_padding * 2 + 1, instance.plane_count_padding * 2 + 1), np.uint8)
+                                if instance.minimap_counter_padding > 0:
+                                    kernel = np.ones((instance.minimap_counter_padding * 2 + 1, instance.minimap_counter_padding * 2 + 1), np.uint8)
                                     mask = cv2.dilate(mask, kernel, iterations=1)
                                 
                                 # Find connected components
@@ -172,22 +172,22 @@ def evaluate_state_fields(instance, frame):
                                 # Subtract 1 because label 0 is background
                                 new_counter_value = num_labels - 1
                                 
-                                # Track stability of plane_counter value
+                                # Track stability of minimap_counter value
                                 current_time = time.time()
-                                if instance.plane_counter_prev_value is not None and new_counter_value == instance.plane_counter_prev_value:
+                                if instance.minimap_counter_prev_value is not None and new_counter_value == instance.minimap_counter_prev_value:
                                     # Value unchanged
-                                    if instance.plane_counter_stable_since is None:
-                                        instance.plane_counter_stable_since = current_time
+                                    if instance.minimap_counter_stable_since is None:
+                                        instance.minimap_counter_stable_since = current_time
                                 else:
                                     # Value changed, reset stability
-                                    instance.plane_counter_stable_since = None
+                                    instance.minimap_counter_stable_since = None
                                 
-                                instance.plane_counter = new_counter_value
-                                instance.plane_counter_prev_value = new_counter_value
+                                instance.minimap_counter = new_counter_value
+                                instance.minimap_counter_prev_value = new_counter_value
                             except Exception as e:
-                                instance.plane_counter = 0
-                                instance.plane_counter_prev_value = None
-                                instance.plane_counter_stable_since = None
+                                instance.minimap_counter = 0
+                                instance.minimap_counter_prev_value = None
+                                instance.minimap_counter_stable_since = None
                         break
     
     # Check if we're within 500ms of trigger time

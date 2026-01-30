@@ -1,7 +1,7 @@
 """Tests for configuration module - game parameters and settings."""
 import pytest
 from unittest.mock import Mock
-from config.game_config import GameConfig, create_game_config
+from android_injections.config.game_config import GameConfig, create_game_config
 
 
 class TestGameConfigInitialization:

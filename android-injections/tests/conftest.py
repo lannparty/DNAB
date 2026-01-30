@@ -3,8 +3,12 @@ import pytest
 import numpy as np
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
+
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
 @pytest.fixture

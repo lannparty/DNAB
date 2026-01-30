@@ -216,7 +216,7 @@ class WindowCapture:
     
     def load_auto_targets(self):
         """Initialize auto target system. Targets are now determined by state values."""
-        print("Auto target system initialized - targets determined by higher_plane and plane_counter")
+        print("Auto target system initialized - targets determined by higher_plane and minimap_counter")
     
     def get_text_size_cached(self, text, font, scale, thickness):
         """Get text size with caching to avoid repeated expensive calls."""
@@ -232,7 +232,7 @@ class WindowCapture:
         return self._text_size_cache[cache_key]
     
     def get_current_auto_target(self):
-        """Determine current target based on higher_plane and plane_counter state values."""
+        """Determine current target based on higher_plane and minimap_counter state values."""
         return get_current_auto_target(self)
     
     def save_bounds(self):
@@ -358,9 +358,9 @@ class WindowCapture:
         
         # Plane detection state
         self.higher_plane = False  # Whether a black square was detected in minimap
-        self.plane_counter = 0  # Number of distinct pixel groups for minimap_counter target
+        self.minimap_counter = 0  # Number of distinct pixel groups for minimap_counter target
         self.editing_plane_size = False
-        self.editing_plane_count_padding = False
+        self.editing_minimap_counter_padding = False
         
         # Auto-touch state
         self.auto_mode = False
@@ -380,9 +380,9 @@ class WindowCapture:
         # Create CLAHE object once (reused for all XP OCR preprocessing)
         self._clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         
-        # Plane counter stability tracking
-        self.plane_counter_prev_value = None
-        self.plane_counter_stable_since = None
+        # Minimap counter stability tracking
+        self.minimap_counter_prev_value = None
+        self.minimap_counter_stable_since = None
         
         # Cache for text sizes to avoid repeated cv2.getTextSize calls
         self._text_size_cache = {}
@@ -1296,7 +1296,7 @@ class WindowCapture:
                 self.plane_size_plus_rect = (x_pos, state_row_y, minus_button_width, field_height)
                 x_pos += minus_button_width + spacing + 10
                 
-                # Plane counter display (read-only) - shows count of distinct groups
+                # Minimap counter display (read-only) - shows count of distinct groups
                 label_text_1 = "plane"
                 label_text_2 = "counter"
                 label_1_size = self.get_text_size_cached(label_text_1, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)[0]
@@ -1307,15 +1307,15 @@ class WindowCapture:
                 cv2.putText(canvas, label_text_2, (x_pos + max_label_width - label_2_size, state_row_y + 22),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.35, (180, 180, 180), 1)
                 x_pos += max_label_width + 5
-                counter_bg_color = (0, 60, 0) if self.plane_counter > 0 else (50, 50, 50)
+                counter_bg_color = (0, 60, 0) if self.minimap_counter > 0 else (50, 50, 50)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), counter_bg_color, -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), (100, 100, 100), 1)
-                counter_text = str(self.plane_counter)
+                counter_text = str(self.minimap_counter)
                 cv2.putText(canvas, counter_text, (x_pos + 5, state_row_y + 18),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                 x_pos += field_width + spacing + 10
                 
-                # Plane count padding field (editable with +/- buttons)
+                # Minimap padding field (editable with +/- buttons)
                 label_text_1 = "plane"
                 label_text_2 = "count"
                 label_text_3 = "padding"
@@ -1336,24 +1336,24 @@ class WindowCapture:
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (70, 70, 70), -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (100, 100, 100), 1)
                 cv2.putText(canvas, "-", (x_pos + 6, state_row_y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                self.plane_count_padding_minus_rect = (x_pos, state_row_y, padding_button_width, field_height)
+                self.minimap_counter_padding_minus_rect = (x_pos, state_row_y, padding_button_width, field_height)
                 x_pos += padding_button_width + 2
                 
-                # Plane count padding number field
-                padding_bg_color = (0, 100, 0) if self.editing_plane_count_padding else (50, 50, 50)
+                # Minimap padding number field
+                padding_bg_color = (0, 100, 0) if self.editing_minimap_counter_padding else (50, 50, 50)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), padding_bg_color, -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), (100, 100, 100), 1)
-                padding_text = self.temp_input if self.editing_plane_count_padding else str(self.config.plane_count_padding)
+                padding_text = self.temp_input if self.editing_minimap_counter_padding else str(self.config.minimap_counter_padding)
                 cv2.putText(canvas, padding_text, (x_pos + 5, state_row_y + 18),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
-                self.plane_count_padding_rect = (x_pos, state_row_y, field_width, field_height)
+                self.minimap_counter_padding_rect = (x_pos, state_row_y, field_width, field_height)
                 x_pos += field_width + 2
                 
                 # Plus button
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (70, 70, 70), -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (100, 100, 100), 1)
                 cv2.putText(canvas, "+", (x_pos + 5, state_row_y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                self.plane_count_padding_plus_rect = (x_pos, state_row_y, padding_button_width, field_height)
+                self.minimap_counter_padding_plus_rect = (x_pos, state_row_y, padding_button_width, field_height)
                 
                 # Counter stable row (new row below state row)
                 counter_stable_row_y = state_row_y + field_height + 10
@@ -1373,8 +1373,8 @@ class WindowCapture:
                 
                 # Calculate stability duration (use loop_start for consistent timing)
                 counter_stable_duration = 0
-                if self.plane_counter_stable_since is not None:
-                    counter_stable_duration = int((loop_start - self.plane_counter_stable_since) * 1000)  # in ms
+                if self.minimap_counter_stable_since is not None:
+                    counter_stable_duration = int((loop_start - self.minimap_counter_stable_since) * 1000)  # in ms
                 counter_stable_is_stable = counter_stable_duration >= int(self.config.stability_timer * 1000)
                 
                 # Counter stable display (read-only)
@@ -1396,6 +1396,8 @@ class WindowCapture:
                     
                     # Get current target name based on state
                     current_target = self.get_current_auto_target()
+                    
+                    print(f"[AUTO] Current target: {current_target}, Detected: {list(self.detected_targets.keys()) if self.detected_targets else 'none'}")
                     
                     if current_target:
                         
@@ -1436,6 +1438,7 @@ class WindowCapture:
                         
                         # Check if current target is detected
                         if current_target in self.detected_targets:
+                            print(f"[AUTO] Target '{current_target}' detected at position")
                             # Update last seen time
                             self.auto_target_last_seen = current_time
                             
@@ -1450,16 +1453,25 @@ class WindowCapture:
                                 prev_x, prev_y, prev_w, prev_h = self.auto_target_prev_pos
                                 # Consider stable if position hasn't changed by more than 5 pixels
                                 position_delta = abs(x_pos - prev_x) + abs(y_pos - prev_y)
+                                print(f"[STABILITY] Position delta: {position_delta}px (threshold: 5px)")
                                 if position_delta <= 5:
                                     # Target is in same position
                                     if self.auto_target_stable_since is None:
                                         self.auto_target_stable_since = current_time
+                                        print(f"[STABILITY] Started stability timer")
                                     # Consider stable after configured time of no movement
-                                    elif current_time - self.auto_target_stable_since >= self.config.stability_timer:
-                                        target_is_stable = True
+                                    else:
+                                        elapsed = current_time - self.auto_target_stable_since
+                                        print(f"[STABILITY] Elapsed: {elapsed:.3f}s / {self.config.stability_timer}s")
+                                        if elapsed >= self.config.stability_timer:
+                                            target_is_stable = True
+                                            print(f"[STABILITY] Target is STABLE!")
                                 else:
                                     # Target moved, reset stability timer
+                                    print(f"[STABILITY] Target moved, resetting timer")
                                     self.auto_target_stable_since = None
+                            else:
+                                print(f"[STABILITY] First detection, no previous position")
                             
                             # Update previous position
                             self.auto_target_prev_pos = current_pos
@@ -1613,9 +1625,14 @@ def detect_desktop_scale() -> float:
 
 
 def kill_existing_instances():
-    """Kill any existing instances of this script."""
+    """Kill any existing instances of this script (main.py or main_qt.py)."""
     current_pid = os.getpid()
     current_script = os.path.abspath(__file__)
+    
+    # Also check for main_qt.py instances
+    # main.py is at: android-injections/src/android_injections/main.py
+    # main_qt.py is at: android-injections/main_qt.py (3 levels up)
+    main_qt_script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(current_script))), 'main_qt.py')
     
     killed_count = 0
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -1624,12 +1641,13 @@ def kill_existing_instances():
             if proc.pid == current_pid:
                 continue
             
-            # Check if it's a python process running this script
+            # Check if it's a python process running this script or main_qt.py
             cmdline = proc.cmdline()
             if cmdline and len(cmdline) > 1:
-                # Check if any of the command line args match our script path
+                # Check if any of the command line args match our script paths
                 for arg in cmdline:
-                    if os.path.abspath(arg) == current_script:
+                    arg_abs = os.path.abspath(arg) if os.path.exists(arg) else arg
+                    if arg_abs == current_script or arg_abs == main_qt_script:
                         print(f"Killing existing instance (PID: {proc.pid})")
                         proc.terminate()
                         try:

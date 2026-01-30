@@ -6,13 +6,15 @@ def analyze_unique_colors(instance):
     """Find RGB colors that appear in the selection box but nowhere else.
     
     This function analyzes a selected region and identifies colors that are unique to
-    that region (appearing only inside the selection, not outside).
+    that region. If the selection is within a defined bound, it compares against that
+    bound only (useful for minimap selections). Otherwise compares against whole window.
     
     Args:
         instance: UI instance with attributes:
             - current_frame: Input image (H, W, 3) in BGR
             - target_selection_rect: ((x1, y1), (x2, y2)) selection coordinates
             - display_scale: Scale factor for display vs. original frame
+            - bounds_with_names: List of (x1, y1, x2, y2, name) bound tuples
             - unique_colors: Will be populated with set of unique colors
             - unique_colors_by_count: Will be populated with sorted (color, count) tuples
             - all_box_colors_by_count: Will be populated with all colors in box
@@ -25,24 +27,50 @@ def analyze_unique_colors(instance):
     x1, y1 = instance.target_selection_rect[0]
     x2, y2 = instance.target_selection_rect[1]
     
+    print(f"[DEBUG] Raw selection: ({x1}, {y1}) to ({x2}, {y2})")
+    
     # Normalize coordinates
     x_min, x_max = min(x1, x2), max(x1, x2)
     y_min, y_max = min(y1, y2), max(y1, y2)
     
+    print(f"[DEBUG] After normalize: ({x_min}, {y_min}) to ({x_max}, {y_max})")
+    
     if x_min == x_max or y_min == y_max:
         return
     
-    # Scale coordinates back to original frame size if display is scaled
-    if instance.display_scale != 1.0:
-        scale_factor = 1.0 / instance.display_scale
-        x_min = int(x_min * scale_factor)
-        x_max = int(x_max * scale_factor)
-        y_min = int(y_min * scale_factor)
-        y_max = int(y_max * scale_factor)
+    # Mouse coordinates are captured directly from the display frame,
+    # which is the same as current_frame (no scaling applied in PyQt mode)
+    # So coordinates are already in frame space - no conversion needed
     
     h, w = instance.current_frame.shape[:2]
+    print(f"[DEBUG] Frame dimensions: {w}x{h}")
     x_min, x_max = max(0, x_min), min(w, x_max)
     y_min, y_max = max(0, y_min), min(h, y_max)
+    
+    # Debug selection coordinates
+    print(f"[DEBUG] Final coords (after clipping): ({x_min}, {y_min}) to ({x_max}, {y_max})")
+    print(f"[DEBUG] Selection dimensions: {x_max - x_min} x {y_max - y_min}")
+    
+    # Check if selection is within any bound (bounds are in frame coordinates)
+    containing_bound = None
+    if hasattr(instance, 'bounds_with_names') and instance.bounds_with_names:
+        print(f"[DEBUG] Checking {len(instance.bounds_with_names)} bounds (in frame coordinates):")
+        for bound in instance.bounds_with_names:
+            if len(bound) == 5:
+                bx1, by1, bx2, by2, name = bound
+                print(f"[DEBUG]   Bound '{name}': ({bx1}, {by1}) to ({bx2}, {by2})")
+                print(f"[DEBUG]     x check: {bx1} <= {x_min} and {x_max} <= {bx2} = {bx1 <= x_min and x_max <= bx2}")
+                print(f"[DEBUG]     y check: {by1} <= {y_min} and {y_max} <= {by2} = {by1 <= y_min and y_max <= by2}")
+                # Check if selection is fully contained within this bound
+                if bx1 <= x_min and x_max <= bx2 and by1 <= y_min and y_max <= by2:
+                    containing_bound = (bx1, by1, bx2, by2, name)
+                    print(f"✓ Selection within bound '{name}' - comparing uniqueness against bound only")
+                    break
+    else:
+        if not hasattr(instance, 'bounds_with_names'):
+            print("[DEBUG] No bounds_with_names attribute!")
+        elif not instance.bounds_with_names:
+            print("[DEBUG] bounds_with_names is empty!")
     
     # Get colors in the box
     box_region = instance.current_frame[y_min:y_max, x_min:x_max]
@@ -59,32 +87,62 @@ def analyze_unique_colors(instance):
                 box_color_counts[pixel] = 0
             box_color_counts[pixel] += 1
     
-    # Get colors outside the box
+    # Get colors outside the box (or outside the containing bound if selection is within one)
     outside_colors = set()
-    # Top region (full width, everything above box)
-    if y_min > 0:
-        top_region = instance.current_frame[0:y_min, :]
-        for row in top_region:
-            for pixel in row:
-                outside_colors.add(tuple(pixel))
-    # Bottom region (full width, everything below box)
-    if y_max < h:
-        bottom_region = instance.current_frame[y_max:h, :]
-        for row in bottom_region:
-            for pixel in row:
-                outside_colors.add(tuple(pixel))
-    # Left region (box height only, to avoid double-counting corners)
-    if x_min > 0:
-        left_region = instance.current_frame[y_min:y_max, 0:x_min]
-        for row in left_region:
-            for pixel in row:
-                outside_colors.add(tuple(pixel))
-    # Right region (box height only, to avoid double-counting corners)
-    if x_max < w:
-        right_region = instance.current_frame[y_min:y_max, x_max:w]
-        for row in right_region:
-            for pixel in row:
-                outside_colors.add(tuple(pixel))
+    
+    if containing_bound:
+        # Compare against bound region only
+        bx1, by1, bx2, by2, name = containing_bound
+        # Top region within bound
+        if y_min > by1:
+            top_region = instance.current_frame[by1:y_min, bx1:bx2]
+            for row in top_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Bottom region within bound
+        if y_max < by2:
+            bottom_region = instance.current_frame[y_max:by2, bx1:bx2]
+            for row in bottom_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Left region within bound
+        if x_min > bx1:
+            left_region = instance.current_frame[y_min:y_max, bx1:x_min]
+            for row in left_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Right region within bound
+        if x_max < bx2:
+            right_region = instance.current_frame[y_min:y_max, x_max:bx2]
+            for row in right_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+    else:
+        # Compare against entire window (original behavior)
+        # Top region (full width, everything above box)
+        if y_min > 0:
+            top_region = instance.current_frame[0:y_min, :]
+            for row in top_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Bottom region (full width, everything below box)
+        if y_max < h:
+            bottom_region = instance.current_frame[y_max:h, :]
+            for row in bottom_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Left region (box height only, to avoid double-counting corners)
+        if x_min > 0:
+            left_region = instance.current_frame[y_min:y_max, 0:x_min]
+            for row in left_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
+        # Right region (box height only, to avoid double-counting corners)
+        if x_max < w:
+            right_region = instance.current_frame[y_min:y_max, x_max:w]
+            for row in right_region:
+                for pixel in row:
+                    outside_colors.add(tuple(pixel))
     
     # Find unique colors (in box but not outside)
     instance.unique_colors = box_colors - outside_colors

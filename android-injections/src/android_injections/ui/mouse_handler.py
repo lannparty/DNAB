@@ -218,7 +218,7 @@ def create_mouse_callback(window_capture_instance):
                         self.xp_reading_first_seen = None
                         self.xp_trigger_time = None
                         self.higher_plane = False
-                        self.plane_counter = 0
+                        self.minimap_counter = 0
                 return
         
         # Check if we're in the capture button area
@@ -331,7 +331,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = False
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -348,7 +348,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = False
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -365,7 +365,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = False
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -382,7 +382,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = False
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -399,7 +399,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = False
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -416,7 +416,7 @@ def create_mouse_callback(window_capture_instance):
                     self.editing_xp_brightness = True
                     self.editing_plane_size = False
                     self.editing_xp_sample_interval = False
-                    self.editing_plane_count_padding = False
+                    self.editing_minimap_counter_padding = False
                     self.temp_input = ""
                     return
             
@@ -487,17 +487,17 @@ def create_mouse_callback(window_capture_instance):
                         print(f"XP sample interval: {int(self.xp_sample_interval * 1000)}ms")
                     return
             
-            # Plane count padding +/- buttons and field
-            if hasattr(self, 'plane_count_padding_minus_rect'):
-                pcpmx, pcpmy, pcpmw, pcpmh = self.plane_count_padding_minus_rect
+            # Minimap padding +/- buttons and field
+            if hasattr(self, 'minimap_counter_padding_minus_rect'):
+                pcpmx, pcpmy, pcpmw, pcpmh = self.minimap_counter_padding_minus_rect
                 if pcpmx <= x <= pcpmx + pcpmw and pcpmy <= y <= pcpmy + pcpmh:
                     if event == cv2.EVENT_LBUTTONDOWN:
-                        self.plane_count_padding = max(0, self.plane_count_padding - 1)
-                        print(f"Plane count padding: {self.plane_count_padding}")
+                        self.minimap_counter_padding = max(0, self.minimap_counter_padding - 1)
+                        print(f"Minimap padding: {self.minimap_counter_padding}")
                     return
             
-            if hasattr(self, 'plane_count_padding_rect'):
-                pcpx, pcpy, pcpw, pcph = self.plane_count_padding_rect
+            if hasattr(self, 'minimap_counter_padding_rect'):
+                pcpx, pcpy, pcpw, pcph = self.minimap_counter_padding_rect
                 if pcpx <= x <= pcpx + pcpw and pcpy <= y <= pcpy + pcph:
                     if event == cv2.EVENT_LBUTTONDOWN:
                         self.editing_delay_min = False
@@ -509,17 +509,17 @@ def create_mouse_callback(window_capture_instance):
                         self.editing_xp_brightness = False
                         self.editing_plane_size = False
                         self.editing_xp_sample_interval = False
-                        self.editing_plane_count_padding = True
-                        self.temp_input = str(self.plane_count_padding)
-                        print("Editing plane count padding - type number and press Enter")
+                        self.editing_minimap_counter_padding = True
+                        self.temp_input = str(self.minimap_counter_padding)
+                        print("Editing minimap padding - type number and press Enter")
                     return
             
-            if hasattr(self, 'plane_count_padding_plus_rect'):
-                pcppx, pcppy, pcppw, pcpph = self.plane_count_padding_plus_rect
+            if hasattr(self, 'minimap_counter_padding_plus_rect'):
+                pcppx, pcppy, pcppw, pcpph = self.minimap_counter_padding_plus_rect
                 if pcppx <= x <= pcppx + pcppw and pcppy <= y <= pcppy + pcpph:
                     if event == cv2.EVENT_LBUTTONDOWN:
-                        self.plane_count_padding = min(50, self.plane_count_padding + 1)
-                        print(f"Plane count padding: {self.plane_count_padding}")
+                        self.minimap_counter_padding = min(50, self.minimap_counter_padding + 1)
+                        print(f"Minimap padding: {self.minimap_counter_padding}")
                     return
         
         # Only handle rectangle selection if target, bounds, or exclude mode is enabled and not in button/text areas

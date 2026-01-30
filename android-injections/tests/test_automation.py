@@ -3,8 +3,8 @@ import pytest
 import time
 import numpy as np
 from unittest.mock import Mock, MagicMock
-from automation.auto_target import get_current_auto_target
-from automation.delay_manager import (
+from android_injections.automation.auto_target import get_current_auto_target
+from android_injections.automation.delay_manager import (
     calculate_next_delay,
     is_delay_ready,
     execute_auto_touch

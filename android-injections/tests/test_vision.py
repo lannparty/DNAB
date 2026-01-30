@@ -83,7 +83,7 @@ class TestFilterUniqueColors:
         instance.target_bounds = {}
         instance.target_to_colors = {}
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, sample_frame, apply_scale=1.0)
         
         # Should return frame with all zeros or similar size
@@ -106,7 +106,7 @@ class TestFilterUniqueColors:
         instance.get_current_auto_target = Mock(return_value=None)
         instance.detected_targets = {}
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, sample_frame, apply_scale=1.0)
         
         assert result.shape == sample_frame.shape
@@ -129,7 +129,7 @@ class TestFilterUniqueColors:
         instance.get_current_auto_target = Mock(return_value=None)
         instance.detected_targets = {}
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, sample_frame, apply_scale=0.5)
         
         # Should be half size
@@ -156,7 +156,7 @@ class TestFilterUniqueColors:
         instance.get_current_auto_target = Mock(return_value=None)
         instance.detected_targets = {}
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, sample_frame, apply_scale=1.0)
         
         # Excluded region should be zero
@@ -188,7 +188,7 @@ class TestFilterUniqueColors:
         instance.detected_targets = {}
         instance.get_current_auto_target = Mock(return_value=None)
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, frame, apply_scale=1.0)
         
         # Should detect blobs and populate detected_targets
@@ -221,7 +221,7 @@ class TestFilterUniqueColors:
         instance.detected_targets = {}
         instance.get_current_auto_target = Mock(return_value=None)
         
-        from vision.color_filter import filter_unique_colors
+        from android_injections.vision.color_filter import filter_unique_colors
         result = filter_unique_colors(instance, frame, apply_scale=1.0)
         
         # Should only detect up to max_blobs
@@ -240,7 +240,7 @@ class TestEvaluateStateFields:
         instance.xp_trigger_time = None
         instance.xp_detected = "0"
         
-        from vision.state_eval import evaluate_state_fields
+        from android_injections.vision.state_eval import evaluate_state_fields
         # Should not raise error
         evaluate_state_fields(instance, sample_frame)
     
@@ -257,7 +257,7 @@ class TestEvaluateStateFields:
         instance._clahe = mock_cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         instance.xp_brightness_threshold = 127
         
-        from vision.state_eval import evaluate_state_fields
+        from android_injections.vision.state_eval import evaluate_state_fields
         evaluate_state_fields(instance, sample_frame)
         
         # Should have processed or left state as initialized
@@ -285,7 +285,7 @@ class TestEvaluateStateFields:
         instance._clahe = mock_cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         instance.xp_brightness_threshold = 127
         
-        from vision.state_eval import evaluate_state_fields
+        from android_injections.vision.state_eval import evaluate_state_fields
         evaluate_state_fields(instance, frame)
         
         # Should set higher_plane to True or False (not raise an error)
@@ -320,7 +320,7 @@ class TestEvaluateStateFields:
         instance._clahe = mock_cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         instance.xp_brightness_threshold = 127
         
-        from vision.state_eval import evaluate_state_fields
+        from android_injections.vision.state_eval import evaluate_state_fields
         evaluate_state_fields(instance, frame)
         
         # Should count distinct groups
@@ -355,7 +355,7 @@ class TestEvaluateStateFields:
         instance._clahe = mock_cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         instance.xp_brightness_threshold = 127
         
-        from vision.state_eval import evaluate_state_fields
+        from android_injections.vision.state_eval import evaluate_state_fields
         evaluate_state_fields(instance, frame)
         
         # Should track stability when value doesn't change
@@ -367,7 +367,7 @@ class TestColorLookupOptimization:
     
     def test_color_lookup_creation(self, mock_cv2):
         """Should create efficient color lookup table."""
-        from vision.color_filter import create_color_lookup
+        from android_injections.vision.color_filter import create_color_lookup
         
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
         lookup = create_color_lookup(colors)
@@ -385,7 +385,7 @@ class TestColorLookupOptimization:
     
     def test_color_lookup_vectorized_search(self, mock_cv2):
         """Should perform fast vectorized color lookup."""
-        from vision.color_filter import create_color_lookup
+        from android_injections.vision.color_filter import create_color_lookup
         
         colors = [(0, 0, 255)]  # Blue
         lookup = create_color_lookup(colors)
@@ -424,7 +424,7 @@ class TestBlobDetectionAndGrouping:
     
     def test_blob_target_assignment_by_color(self):
         """Should assign blobs to targets based on dominant color."""
-        from vision.color_filter import assign_blob_to_target
+        from android_injections.vision.color_filter import assign_blob_to_target
         
         blob_colors = {(255, 0, 0), (254, 0, 0)}  # Mostly blue
         target_to_colors = {

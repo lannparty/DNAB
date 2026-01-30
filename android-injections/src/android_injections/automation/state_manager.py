@@ -21,6 +21,8 @@ def is_target_stable(instance, current_pos):
     current_time = time.time()
     
     if instance.auto_target_prev_pos is None:
+        print(f"[STABILITY] No previous position, setting it now")
+        instance.auto_target_prev_pos = current_pos
         return False
     
     prev_x, prev_y, _, _ = instance.auto_target_prev_pos
@@ -28,18 +30,27 @@ def is_target_stable(instance, current_pos):
     
     # Consider stable if position hasn't changed by more than 5 pixels
     position_delta = abs(curr_x - prev_x) + abs(curr_y - prev_y)
+    print(f"[STABILITY] Position delta: {position_delta}px (prev: {prev_x},{prev_y} curr: {curr_x},{curr_y})")
     
     if position_delta <= 5:
         # Target is in same position
         if instance.auto_target_stable_since is None:
             instance.auto_target_stable_since = current_time
+            print(f"[STABILITY] Started stability timer")
         # Consider stable after configured time of no movement
-        elif current_time - instance.auto_target_stable_since >= instance.stability_timer:
-            return True
+        else:
+            elapsed = current_time - instance.auto_target_stable_since
+            print(f"[STABILITY] Elapsed: {elapsed:.3f}s / {instance.config.stability_timer}s")
+            if elapsed >= instance.config.stability_timer:
+                print(f"[STABILITY] Target is STABLE!")
+                instance.auto_target_prev_pos = current_pos
+                return True
     else:
         # Target moved, reset stability timer
+        print(f"[STABILITY] Target moved, resetting timer")
         instance.auto_target_stable_since = None
     
+    instance.auto_target_prev_pos = current_pos
     return False
 
 

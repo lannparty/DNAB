@@ -258,14 +258,14 @@ def process_keyboard_event(instance, key_code):
             handle_numeric_input(instance, key_code)
         return True
     
-    elif instance.editing_plane_count_padding:
+    elif instance.editing_minimap_counter_padding:
         if key_code == 13:  # Enter
-            success, value = update_field_from_input(instance, 'plane_count_padding', instance.temp_input, 0, 100, use_config=True)
+            success, value = update_field_from_input(instance, 'minimap_counter_padding', instance.temp_input, 0, 100, use_config=True)
             if success:
-                print(f"Plane count padding set to: {value}")
+                print(f"Minimap padding set to: {value}")
             else:
                 print("Invalid number")
-            instance.editing_plane_count_padding = False
+            instance.editing_minimap_counter_padding = False
             instance.temp_input = ""
         else:
             handle_numeric_input(instance, key_code)
