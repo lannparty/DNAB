@@ -37,8 +37,9 @@ def evaluate_state_fields(instance, frame):
     """
     # Check for XP changes using OCR within xp bound
     # Sample at configurable interval to reduce CPU load
+    # Only run if xp_tracking is enabled
     current_time = time.time()
-    if hasattr(instance, 'bounds_with_names') and instance.bounds_with_names:
+    if hasattr(instance, 'xp_tracking') and instance.xp_tracking and hasattr(instance, 'bounds_with_names') and instance.bounds_with_names:
         # Only sample if enough time has passed since last sample
         if current_time - instance.xp_last_sample_time >= instance.xp_sample_interval:
             instance.xp_last_sample_time = current_time
@@ -162,15 +163,25 @@ def evaluate_state_fields(instance, frame):
                                 b, g, r = minimap_region[:, :, 0], minimap_region[:, :, 1], minimap_region[:, :, 2]
                                 mask = counter_lookup[b, g, r].astype(np.uint8) * 255
                                 
+                                # Count non-zero pixels before dilation
+                                pixels_before = np.count_nonzero(mask)
+                                
                                 # Apply dilation to connect pixels within padding distance
                                 if instance.minimap_counter_padding > 0:
                                     kernel = np.ones((instance.minimap_counter_padding * 2 + 1, instance.minimap_counter_padding * 2 + 1), np.uint8)
                                     mask = cv2.dilate(mask, kernel, iterations=1)
                                 
+                                # Count non-zero pixels after dilation
+                                pixels_after = np.count_nonzero(mask)
+                                
                                 # Find connected components
                                 num_labels, labels = cv2.connectedComponents(mask)
                                 # Subtract 1 because label 0 is background
                                 new_counter_value = num_labels - 1
+                                
+                                # Debug logging
+                                if pixels_before > 0:
+                                    print(f"[MINIMAP] padding={instance.minimap_counter_padding}, pixels_before={pixels_before}, pixels_after={pixels_after}, components={new_counter_value}")
                                 
                                 # Track stability of minimap_counter value
                                 current_time = time.time()

@@ -102,18 +102,20 @@ class MirrorWindow(QMainWindow):
         self.exclude_btn = self._create_button("Draw Exclude: OFF", self.toggle_exclude_mode)
         self.filter_btn = self._create_button("Filter: OFF", self.toggle_filter)
         self.state_btn = self._create_button("State: OFF", self.toggle_state_tracking)
+        self.xp_btn = self._create_button("XP: OFF", self.toggle_xp_tracking)
         
         button_row1.addWidget(self.target_btn)
         button_row1.addWidget(self.bounds_btn)
         button_row1.addWidget(self.exclude_btn)
         button_row1.addWidget(self.filter_btn)
         button_row1.addWidget(self.state_btn)
+        button_row1.addWidget(self.xp_btn)
         
         widget_row1 = QWidget()
         widget_row1.setLayout(button_row1)
         widget_row1.setStyleSheet("background-color: #1e1e1e;")
         widget_row1.setMaximumHeight(48)
-        main_layout.addWidget(widget_row1)
+        # Widget will be added to capture layout
         
         # Second button row (Color controls, pixels, blobs, checkboxes)
         button_row2 = QHBoxLayout()
@@ -121,7 +123,7 @@ class MirrorWindow(QMainWindow):
         button_row2.setSpacing(12)
         
         # Color count controls
-        button_row2.addWidget(QLabel("target colors:"))
+        button_row2.addWidget(QLabel("target\ncolors"))
         self.colors_minus_btn = self._create_mini_button("-", self.decrease_colors)
         self.colors_display = QLabel("20")
         self.colors_display.setMinimumWidth(35)
@@ -133,7 +135,7 @@ class MirrorWindow(QMainWindow):
         button_row2.addWidget(self.colors_plus_btn)
         
         # Min blob pixels controls
-        button_row2.addWidget(QLabel("target min pixels:"))
+        button_row2.addWidget(QLabel("target min\npixels"))
         self.pixels_minus_btn = self._create_mini_button("-", self.decrease_pixels)
         self.pixels_display = QLabel("2")
         self.pixels_display.setMinimumWidth(35)
@@ -145,7 +147,7 @@ class MirrorWindow(QMainWindow):
         button_row2.addWidget(self.pixels_plus_btn)
         
         # Max blobs controls
-        button_row2.addWidget(QLabel("max blobs:"))
+        button_row2.addWidget(QLabel("max\nblobs"))
         self.blobs_minus_btn = self._create_mini_button("-", self.decrease_blobs)
         self.blobs_display = QLabel("1")
         self.blobs_display.setMinimumWidth(35)
@@ -171,7 +173,7 @@ class MirrorWindow(QMainWindow):
         
         widget_row2 = QWidget()
         widget_row2.setLayout(button_row2)
-        widget_row2.setStyleSheet("background-color: #242424;")
+        widget_row2.setStyleSheet("background-color: #1e1e1e;")
         widget_row2.setMaximumHeight(48)
         # Widget will be added to layout later, after auto row
         
@@ -183,6 +185,9 @@ class MirrorWindow(QMainWindow):
         capture_layout = QVBoxLayout()
         capture_layout.setContentsMargins(12, 12, 12, 12)
         capture_layout.setSpacing(5)
+        
+        # Add draw buttons row at top
+        capture_layout.addWidget(widget_row1)
         
         # Target name input + capture button
         input_row = QHBoxLayout()
@@ -293,7 +298,7 @@ class MirrorWindow(QMainWindow):
         state_values_row.setSpacing(10)
         
         # XP State Display (read-only, green when > 0)
-        state_values_row.addWidget(QLabel("xp state:"))
+        state_values_row.addWidget(QLabel("xp\nstate"))
         self.state_xp_display = QLabel("0")
         self.state_xp_display.setMinimumWidth(70)
         self.state_xp_display.setMaximumWidth(70)
@@ -305,7 +310,7 @@ class MirrorWindow(QMainWindow):
         state_values_row.addSpacing(10)
         
         # Total XP Display (read-only, wider)
-        state_values_row.addWidget(QLabel("total:"))
+        state_values_row.addWidget(QLabel("total"))
         self.total_xp_display = QLabel("---")
         self.total_xp_display.setMinimumWidth(70)
         self.total_xp_display.setMaximumWidth(70)
@@ -317,7 +322,7 @@ class MirrorWindow(QMainWindow):
         state_values_row.addSpacing(10)
         
         # XP Sample Rate (editable with +/-)
-        state_values_row.addWidget(QLabel("xp sample rate:"))
+        state_values_row.addWidget(QLabel("xp sample\nrate"))
         self.sample_minus_btn = self._create_mini_button("-", self.decrease_sample_interval)
         self.sample_display = QLabel("1.0")
         self.sample_display.setMinimumWidth(70)
@@ -337,7 +342,7 @@ class MirrorWindow(QMainWindow):
         state_values_row.addSpacing(10)
         
         # XP Detection Brightness (editable)
-        state_values_row.addWidget(QLabel("xp detection brightness:"))
+        state_values_row.addWidget(QLabel("xp detection\nbrightness"))
         self.brightness_display = QLabel("170")
         self.brightness_display.setMinimumWidth(70)
         self.brightness_display.setMaximumWidth(70)
@@ -352,7 +357,7 @@ class MirrorWindow(QMainWindow):
         state_values_row.addStretch()
         
         state_values_widget.setLayout(state_values_row)
-        state_values_widget.setStyleSheet("background-color: #242424;")
+        state_values_widget.setStyleSheet("background-color: #1e1e1e;")
         state_values_widget.setMaximumHeight(48)
         capture_layout.addWidget(state_values_widget)
         
@@ -363,7 +368,7 @@ class MirrorWindow(QMainWindow):
         plane_row.setSpacing(10)
         
         # Higher Plane Display (read-only, green when true)
-        plane_row.addWidget(QLabel("higher plane:"))
+        plane_row.addWidget(QLabel("higher\nplane"))
         self.higher_plane_display = QLabel("0")
         self.higher_plane_display.setMinimumWidth(70)
         self.higher_plane_display.setMaximumWidth(70)
@@ -375,7 +380,7 @@ class MirrorWindow(QMainWindow):
         plane_row.addSpacing(10)
         
         # Plane Size (editable with +/-)
-        plane_row.addWidget(QLabel("plane size:"))
+        plane_row.addWidget(QLabel("plane\nsize"))
         self.plane_size_minus_btn = self._create_mini_button("-", self.decrease_plane_size)
         self.plane_size_display = QLabel("5")
         self.plane_size_display.setMinimumWidth(70)
@@ -394,7 +399,7 @@ class MirrorWindow(QMainWindow):
         plane_row.addStretch()
         
         plane_row_widget.setLayout(plane_row)
-        plane_row_widget.setStyleSheet("background-color: #242424;")
+        plane_row_widget.setStyleSheet("background-color: #1e1e1e;")
         plane_row_widget.setMaximumHeight(48)
         capture_layout.addWidget(plane_row_widget)
         
@@ -405,7 +410,7 @@ class MirrorWindow(QMainWindow):
         minimap_row.setSpacing(10)
         
         # Plane Counter Display (read-only, green when > 0)
-        minimap_row.addWidget(QLabel("minimap counter:"))
+        minimap_row.addWidget(QLabel("minimap\ncounter"))
         self.minimap_counter_display = QLabel("0")
         self.minimap_counter_display.setMinimumWidth(70)
         self.minimap_counter_display.setMaximumWidth(70)
@@ -417,7 +422,7 @@ class MirrorWindow(QMainWindow):
         minimap_row.addSpacing(10)
         
         # Minimap Counter Padding (editable with +/-)
-        minimap_row.addWidget(QLabel("padding:"))
+        minimap_row.addWidget(QLabel("padding"))
         self.plane_padding_minus_btn = self._create_mini_button("-", self.decrease_plane_padding)
         self.plane_padding_display = QLabel("5")
         self.plane_padding_display.setMinimumWidth(70)
@@ -436,7 +441,7 @@ class MirrorWindow(QMainWindow):
         minimap_row.addSpacing(10)
         
         # Counter Stability Timer (editable with +/-)
-        minimap_row.addWidget(QLabel("counter stability:"))
+        minimap_row.addWidget(QLabel("counter\nstability"))
         self.counter_stability_minus_btn = self._create_mini_button("-", self.decrease_counter_stability)
         self.counter_stability_display = QLabel("1.0")
         self.counter_stability_display.setMinimumWidth(70)
@@ -456,7 +461,7 @@ class MirrorWindow(QMainWindow):
         minimap_row.addStretch()
         
         minimap_row_widget.setLayout(minimap_row)
-        minimap_row_widget.setStyleSheet("background-color: #242424;")
+        minimap_row_widget.setStyleSheet("background-color: #1e1e1e;")
         minimap_row_widget.setMaximumHeight(48)
         capture_layout.addWidget(minimap_row_widget)
         
@@ -546,7 +551,7 @@ class MirrorWindow(QMainWindow):
         layout.addStretch()
         
         widget.setLayout(layout)
-        widget.setStyleSheet("background-color: #242424;")
+        widget.setStyleSheet("background-color: #1e1e1e;")
         widget.setMaximumHeight(42)
         return widget
     
@@ -562,7 +567,7 @@ class MirrorWindow(QMainWindow):
         delay_group.setSpacing(5)
         
         # Min delay
-        delay_group.addWidget(QLabel("touch delay min:"))
+        delay_group.addWidget(QLabel("touch delay\nmin"))
         self.delay_min_display = QLabel("0.3")
         self.delay_min_display.setMinimumWidth(70)
         self.delay_min_display.setMaximumWidth(70)
@@ -576,7 +581,7 @@ class MirrorWindow(QMainWindow):
         delay_group.addWidget(QLabel("s"))
         
         # Max delay
-        delay_group.addWidget(QLabel("touch delay max:"))
+        delay_group.addWidget(QLabel("touch delay\nmax"))
         self.delay_max_display = QLabel("4.4")
         self.delay_max_display.setMinimumWidth(70)
         self.delay_max_display.setMaximumWidth(70)
@@ -590,7 +595,7 @@ class MirrorWindow(QMainWindow):
         delay_group.addWidget(QLabel("s"))
         
         # Mean delay
-        delay_group.addWidget(QLabel("touch delay mean:"))
+        delay_group.addWidget(QLabel("touch delay\nmean"))
         self.delay_mean_display = QLabel("0.8")
         self.delay_mean_display.setMinimumWidth(70)
         self.delay_mean_display.setMaximumWidth(70)
@@ -604,7 +609,7 @@ class MirrorWindow(QMainWindow):
         delay_group.addWidget(QLabel("s"))
         
         # Std delay
-        delay_group.addWidget(QLabel("touch delay std:"))
+        delay_group.addWidget(QLabel("touch delay\nstd"))
         self.delay_std_display = QLabel("0.6")
         self.delay_std_display.setMinimumWidth(70)
         self.delay_std_display.setMaximumWidth(70)
@@ -621,7 +626,7 @@ class MirrorWindow(QMainWindow):
         layout.addSpacing(20)
         
         # Stability timer
-        layout.addWidget(QLabel("touch target stability:"))
+        layout.addWidget(QLabel("touch target\nstability"))
         self.stability_display = QLabel("1.0")
         self.stability_display.setMinimumWidth(70)
         self.stability_display.setMaximumWidth(70)
@@ -637,7 +642,7 @@ class MirrorWindow(QMainWindow):
         layout.addSpacing(20)
         
         # Passing distance
-        layout.addWidget(QLabel("touch target passing:"))
+        layout.addWidget(QLabel("touch target\npassing"))
         self.passing_dist_display = QLabel("50")
         self.passing_dist_display.setMinimumWidth(70)
         self.passing_dist_display.setMaximumWidth(70)
@@ -653,7 +658,7 @@ class MirrorWindow(QMainWindow):
         layout.addStretch()
         
         widget.setLayout(layout)
-        widget.setStyleSheet("background-color: #242424;")
+        widget.setStyleSheet("background-color: #1e1e1e;")
         widget.setMaximumHeight(48)
         return widget
     
@@ -731,8 +736,97 @@ class MirrorWindow(QMainWindow):
         self.bounds_btn.setText("Draw Bounds: ON" if self.capture.bounds_mode else "Draw Bounds: OFF")
         self.exclude_btn.setText("Draw Exclude: ON" if self.capture.exclude_mode else "Draw Exclude: OFF")
         self.state_btn.setText("State: ON" if self.capture.state_tracking else "State: OFF")
+        self.xp_btn.setText("XP: ON" if self.capture.xp_tracking else "XP: OFF")
         self.filter_btn.setText("Filter: ON" if self.capture.show_filtered else "Filter: OFF")
         self.auto_btn.setText("Auto: ON" if self.capture.auto_mode else "Auto: OFF")
+        
+        # Update draw button colors to match selection box colors
+        if self.capture.target_mode:
+            self.target_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #00ff00;
+                    color: #000000;
+                    border: 1px solid #00cc00;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #00dd00;
+                }
+            """)
+        else:
+            self.target_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3a3a3a;
+                    color: #e0e0e0;
+                    border: 1px solid #555;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #4a4a4a;
+                }
+            """)
+        
+        if self.capture.bounds_mode:
+            self.bounds_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffff00;
+                    color: #000000;
+                    border: 1px solid #cccc00;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #dddd00;
+                }
+            """)
+        else:
+            self.bounds_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3a3a3a;
+                    color: #e0e0e0;
+                    border: 1px solid #555;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #4a4a4a;
+                }
+            """)
+        
+        if self.capture.exclude_mode:
+            self.exclude_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ff0000;
+                    color: #ffffff;
+                    border: 1px solid #cc0000;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #dd0000;
+                }
+            """)
+        else:
+            self.exclude_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3a3a3a;
+                    color: #e0e0e0;
+                    border: 1px solid #555;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #4a4a4a;
+                }
+            """)
         
         # Update display labels
         self.colors_display.setText(str(self.capture.colors_per_target))
@@ -994,6 +1088,18 @@ class MirrorWindow(QMainWindow):
             font-size: 12px;
         """)
         
+        xp_color = "#f59e0b" if self.capture.xp_tracking else "#2d2d2d"
+        xp_border = "#fbbf24" if self.capture.xp_tracking else "#444"
+        self.xp_btn.setStyleSheet(f"""
+            background-color: {xp_color};
+            color: #e0e0e0;
+            border: 1px solid {xp_border};
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+        """)
+        
         filter_color = "#10b981" if self.capture.show_filtered else "#2d2d2d"
         filter_border = "#14b8a6" if self.capture.show_filtered else "#444"
         self.filter_btn.setStyleSheet(f"""
@@ -1044,6 +1150,9 @@ class MirrorWindow(QMainWindow):
     
     def toggle_state_tracking(self):
         self.capture.state_tracking = not self.capture.state_tracking
+    
+    def toggle_xp_tracking(self):
+        self.capture.xp_tracking = not self.capture.xp_tracking
     
     def toggle_filter(self):
         self.capture.show_filtered = not self.capture.show_filtered

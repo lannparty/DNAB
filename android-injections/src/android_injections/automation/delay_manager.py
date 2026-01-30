@@ -2,8 +2,10 @@
 
 import subprocess
 import numpy as np
+from .performance_logger import log_operation
 
 
+@log_operation("calculate_next_delay")
 def calculate_next_delay(instance):
     """
     Calculate next touch interval using normal distribution with bounds.
@@ -23,6 +25,7 @@ def calculate_next_delay(instance):
     return max(instance.touch_delay_min, min(instance.touch_delay_max, interval))
 
 
+@log_operation("is_delay_ready")
 def is_delay_ready(instance, current_time):
     """
     Check if enough time has elapsed since last touch to attempt next touch.
@@ -41,6 +44,7 @@ def is_delay_ready(instance, current_time):
     return time_elapsed >= instance.next_touch_interval
 
 
+@log_operation("execute_auto_touch")
 def execute_auto_touch(instance, target_x, target_y, target_name):
     """
     Execute ADB tap command at target position and update timing state.

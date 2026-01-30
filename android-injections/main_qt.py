@@ -405,6 +405,9 @@ class QtWindowCapture(WindowCapture):
         self.minimap_counter_prev_value = None
         self.minimap_counter_stable_since = None
         
+        # XP tracking (separate from state tracking)
+        self.xp_tracking = False
+        
         # Auto mode
         self.auto_mode = False
         self.last_auto_touch = 0
@@ -520,9 +523,16 @@ class QtWindowCapture(WindowCapture):
         if not self.auto_mode:
             return
         
+        from android_injections.automation.performance_logger import get_logger
+        import time
+        
+        logger = get_logger()
+        logger.start_frame()
+        
+        start = time.perf_counter()
+        
         print(f"[AUTO] update_auto_touch called, auto_mode={self.auto_mode}")
         
-        import time
         from android_injections.automation.auto_target import get_current_auto_target
         from android_injections.automation.delay_manager import is_delay_ready, execute_auto_touch
         from android_injections.automation.state_manager import (
@@ -562,31 +572,61 @@ class QtWindowCapture(WindowCapture):
             
             # Check if target passed (XP gained)
             check_target_passed(self)
+        
+        # Log total update_auto_touch time
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.log_timing("update_auto_touch_total", duration_ms)
     
     def get_frame_for_display(self):
         """Fetch and prepare frame for PyQt6 display with overlays."""
+        import time
+        import cv2
+        
         try:
+            # Time frame capture
+            t_start = time.perf_counter()
             frame = self.capture_window_pil(self.client_window)
+            t_capture = (time.perf_counter() - t_start) * 1000
+            
             if frame is None:
                 return None
             
-            # Convert to BGR
-            import cv2
+            # Time color conversion
+            t_start = time.perf_counter()
             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             self.current_frame = frame_bgr.copy()
             self.frame_bgr = frame_bgr.copy()
+            t_convert = (time.perf_counter() - t_start) * 1000
             
-            # Evaluate state if enabled
+            # Time state evaluation
+            t_state = 0
             if self.state_tracking:
+                t_start = time.perf_counter()
                 self.evaluate_state_fields(frame_bgr)
+                t_state = (time.perf_counter() - t_start) * 1000
             
-            # Apply filter or prepare display frame
+            # Time filtering or display prep with detailed breakdown
+            t_start_display = time.perf_counter()
+            t_filter = 0
+            t_selections = 0
+            t_bounds = 0
+            t_excludes = 0
+            t_targets = 0
+            t_center_dot = 0
+            t_scaling = 0
+            
             if self.show_filtered:
-                display_frame = self.filter_unique_colors(frame_bgr.copy(), apply_scale=self.display_scale)
+                t_start = time.perf_counter()
+                # Skip scaling during filter if auto mode is on - we only need positions, not display
+                # The final display scaling happens later at line 684 anyway
+                scale_for_filter = 1.0 if self.auto_mode else self.display_scale
+                display_frame = self.filter_unique_colors(frame_bgr.copy(), apply_scale=scale_for_filter)
+                t_filter = (time.perf_counter() - t_start) * 1000
             else:
                 display_frame = frame_bgr.copy()
                 
                 # Draw selection rectangle if active (only when filter is OFF)
+                t_start = time.perf_counter()
                 if self.selecting and self.selection_start and self.selection_end:
                     # Choose color based on mode
                     if self.exclude_mode:
@@ -607,8 +647,10 @@ class QtWindowCapture(WindowCapture):
                     if self.exclude_selection_rect:
                         cv2.rectangle(display_frame, self.exclude_selection_rect[0], 
                                     self.exclude_selection_rect[1], (0, 0, 255), 2)  # Red
+                t_selections = (time.perf_counter() - t_start) * 1000
                 
                 # Draw all bounds rectangles with labels if enabled
+                t_start = time.perf_counter()
                 if hasattr(self, 'show_bounds') and self.show_bounds and hasattr(self, 'bounds_with_names'):
                     for bound in self.bounds_with_names:
                         bx1, by1, bx2, by2, name = bound
@@ -617,8 +659,10 @@ class QtWindowCapture(WindowCapture):
                         label_y = max(by1 - 5, label_size[1] + 5)
                         cv2.putText(display_frame, name, (bx1, label_y), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+                t_bounds = (time.perf_counter() - t_start) * 1000
                 
                 # Draw all excluded regions with labels if enabled
+                t_start = time.perf_counter()
                 if hasattr(self, 'show_excludes') and self.show_excludes and hasattr(self, 'excluded_regions_with_names'):
                     for exclude in self.excluded_regions_with_names:
                         ex1, ey1, ex2, ey2, name = exclude
@@ -627,8 +671,10 @@ class QtWindowCapture(WindowCapture):
                         label_y = max(ey1 - 5, label_size[1] + 5)
                         cv2.putText(display_frame, name, (ex1, label_y), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                t_excludes = (time.perf_counter() - t_start) * 1000
                 
                 # Draw detected targets if state tracking is on
+                t_start = time.perf_counter()
                 if self.state_tracking and hasattr(self, 'detected_targets'):
                     for target_name, (tx, ty, tw, th) in self.detected_targets.items():
                         # Draw rectangle around target
@@ -638,19 +684,53 @@ class QtWindowCapture(WindowCapture):
                         label_y = max(ty - 5, label_size[1] + 5)
                         cv2.putText(display_frame, target_name, (tx, label_y), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+                t_targets = (time.perf_counter() - t_start) * 1000
                 
                 # Draw white center dot
+                t_start = time.perf_counter()
                 h, w = display_frame.shape[:2]
                 center_x = w // 2
                 center_y = h // 2
                 cv2.circle(display_frame, (center_x, center_y), 3, (255, 255, 255), -1)
+                t_center_dot = (time.perf_counter() - t_start) * 1000
                 
                 # Scale display frame if needed
+                t_start = time.perf_counter()
                 if self.display_scale != 1.0:
                     h, w = display_frame.shape[:2]
                     new_w = int(w * self.display_scale)
                     new_h = int(h * self.display_scale)
                     display_frame = cv2.resize(display_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+                t_scaling = (time.perf_counter() - t_start) * 1000
+            
+            t_display_prep = (time.perf_counter() - t_start_display) * 1000
+            
+            # Log timings if auto mode is on
+            if self.auto_mode:
+                from android_injections.automation.performance_logger import get_logger
+                logger = get_logger()
+                logger.log_timing("frame_capture", t_capture)
+                logger.log_timing("color_conversion", t_convert)
+                if t_state > 0:
+                    logger.log_timing("state_evaluation", t_state)
+                logger.log_timing("display_prep", t_display_prep)
+                # Log display_prep substeps
+                if t_filter > 0:
+                    logger.log_timing("  filter_unique_colors", t_filter)
+                if t_selections > 0:
+                    logger.log_timing("  draw_selections", t_selections)
+                if t_bounds > 0:
+                    logger.log_timing("  draw_bounds", t_bounds)
+                if t_excludes > 0:
+                    logger.log_timing("  draw_excludes", t_excludes)
+                if t_targets > 0:
+                    logger.log_timing("  draw_targets", t_targets)
+                if t_center_dot > 0:
+                    logger.log_timing("  draw_center_dot", t_center_dot)
+                if t_scaling > 0:
+                    logger.log_timing("  scaling", t_scaling)
+                # End frame after all timings are logged
+                logger.end_frame()
             
             return display_frame
         except Exception as e:

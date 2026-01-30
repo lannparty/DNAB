@@ -1,8 +1,10 @@
 """Auto-touch state management - target stability, passing conditions, and state reset."""
 
 import time
+from .performance_logger import log_operation
 
 
+@log_operation("is_target_stable")
 def is_target_stable(instance, current_pos):
     """
     Check if target position has stabilized after movement.
@@ -54,6 +56,7 @@ def is_target_stable(instance, current_pos):
     return False
 
 
+@log_operation("is_dot_stable")
 def is_dot_stable(instance, current_dot_pos, pass_pause_elapsed):
     """
     Check if dot (player) position has stabilized after passing target.
@@ -97,6 +100,7 @@ def is_dot_stable(instance, current_dot_pos, pass_pause_elapsed):
     return False
 
 
+@log_operation("check_target_passed")
 def check_target_passed(instance):
     """
     Determine if current target has been passed (completed).

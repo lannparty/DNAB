@@ -75,100 +75,161 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
     if not hasattr(instance, 'filter_colors') or not instance.filter_colors:
         return frame
     
-    # Determine which colors to filter for
-    active_colors = instance.filter_colors
+    # Determine display mode based on manual_target_name and auto_mode
+    # Auto mode always shows all targets; manual mode can show 'none', 'all', or a specific target
+    in_auto_mode = hasattr(instance, 'auto_mode') and instance.auto_mode
+    manual_target = getattr(instance, 'manual_target_name', None) if not in_auto_mode else None
     
-    # If manual target is selected (via +/- buttons), only show that target
-    # BUT: ignore manual target if auto mode is on (auto mode needs all targets detected)
-    use_manual_target = (hasattr(instance, 'manual_target_name') and instance.manual_target_name and
-                        not (hasattr(instance, 'auto_mode') and instance.auto_mode))
+    # Handle special case: 'none' means show nothing
+    if manual_target == 'none':
+        black_frame = np.zeros_like(frame)
+        if apply_scale != 1.0:
+            h, w = frame.shape[:2]
+            black_frame = cv2.resize(black_frame, (int(w * apply_scale), int(h * apply_scale)), 
+                                    interpolation=cv2.INTER_AREA)
+        return black_frame
     
-    if use_manual_target:
-        if instance.manual_target_name == 'none':
-            # Special case: 'none' means show nothing
-            black_frame = np.zeros_like(frame)
-            if apply_scale != 1.0:
-                h, w = frame.shape[:2]
-                h_scaled = int(h * apply_scale)
-                w_scaled = int(w * apply_scale)
-                black_frame = cv2.resize(black_frame, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
-            return black_frame
-        elif instance.manual_target_name == 'all':
-            # Special case: 'all' means search all targets (default behavior)
-            active_colors = instance.filter_colors
-        elif hasattr(instance, 'target_to_colors') and instance.manual_target_name in instance.target_to_colors:
-            active_colors = instance.target_to_colors[instance.manual_target_name]
-        else:
-            # Manual target not loaded, show nothing
-            black_frame = np.zeros_like(frame)
-            if apply_scale != 1.0:
-                h, w = frame.shape[:2]
-                h_scaled = int(h * apply_scale)
-                w_scaled = int(w * apply_scale)
-                black_frame = cv2.resize(black_frame, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
-            return black_frame
+    # Determine if we're in multi-target mode (show all targets) or single-target mode
+    has_multiple_targets = (hasattr(instance, 'target_to_colors') and 
+                           instance.target_to_colors and 
+                           len(instance.target_to_colors) > 1)
+    
+    # Multi-target mode: auto mode, manual 'all', or filter first enabled (no manual target set)
+    is_multi_target = (in_auto_mode or 
+                      manual_target == 'all' or 
+                      (manual_target is None and has_multiple_targets))
     
     # Create a black canvas
     filtered = np.zeros_like(frame)
-    
-    # Create a binary mask for matching pixels
     h, w = frame.shape[:2]
-    
     t1 = time.time()
     
-    # Vectorized color matching using lookup table (O(1) per pixel instead of O(N))
-    # If manual target is selected, we need to rebuild lookup for that target's colors
-    if instance.color_lookup is None or (hasattr(instance, 'manual_target_name') and instance.manual_target_name and active_colors != instance.filter_colors):
-        # Need to create a temporary lookup for active_colors
+    # ============================================================================
+    # MULTI-TARGET MODE: Detect each target separately for accurate pixel counts
+    # ============================================================================
+    if is_multi_target and has_multiple_targets:
+        b, g, r = frame[:, :, 0], frame[:, :, 1], frame[:, :, 2]
+        instance.detected_targets = {}
+        largest_per_target = {}
+        
+        # Process each target individually
+        for target_name, target_colors in instance.target_to_colors.items():
+            # Convert to set to remove duplicate colors
+            unique_colors = set(target_colors) if not isinstance(target_colors, set) else target_colors
+            
+            # Create lookup for this target's colors only
+            target_lookup = np.zeros((256, 256, 256), dtype=bool)
+            for b_val, g_val, r_val in unique_colors:
+                target_lookup[b_val, g_val, r_val] = True
+            
+            # Create mask for this target
+            target_mask = target_lookup[b, g, r].astype(np.uint8) * 255
+            
+            # Apply bounds restriction if target has bounds
+            if hasattr(instance, 'target_bounds') and target_name in instance.target_bounds:
+                x1, y1, x2, y2 = instance.target_bounds[target_name]
+                x1, x2 = max(0, min(w, x1)), max(0, min(w, x2))
+                y1, y2 = max(0, min(h, y1)), max(0, min(h, y2))
+                bounds_mask = np.zeros((h, w), dtype=np.uint8)
+                bounds_mask[y1:y2, x1:x2] = 255
+                target_mask = target_mask & bounds_mask
+            
+            # Apply excluded regions
+            for x_min, y_min, x_max, y_max in instance.excluded_regions:
+                ex_min, ex_max = max(0, min(w, x_min)), max(0, min(w, x_max))
+                ey_min, ey_max = max(0, min(h, y_min)), max(0, min(h, y_max))
+                target_mask[ey_min:ey_max, ex_min:ex_max] = 0
+            
+            # Apply this target's mask to filtered image
+            filtered[target_mask > 0] = frame[target_mask > 0]
+            
+            # Detect blobs in this target's mask
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(target_mask, connectivity=8)
+            
+            # Find largest blob for this target
+            largest_blob = None
+            if num_labels > 1:
+                for label_idx in range(1, num_labels):
+                    area = stats[label_idx, cv2.CC_STAT_AREA]
+                    if area >= instance.min_blob_pixels:
+                        if largest_blob is None or area > largest_blob[4]:
+                            x = stats[label_idx, cv2.CC_STAT_LEFT]
+                            y = stats[label_idx, cv2.CC_STAT_TOP]
+                            w_blob = stats[label_idx, cv2.CC_STAT_WIDTH]
+                            h_blob = stats[label_idx, cv2.CC_STAT_HEIGHT]
+                            largest_blob = (x, y, w_blob, h_blob, area)
+            
+            # Store the largest blob for this target
+            if largest_blob is not None:
+                x, y, w_blob, h_blob, area = largest_blob
+                largest_per_target[target_name] = (x, y, w_blob, h_blob, area)
+                # Store in original coordinates for ADB touch (always unscaled)
+                instance.detected_targets[target_name] = (x, y, w_blob, h_blob)
+        
+        # Apply max_blobs limit if set (keep N largest blobs across all targets)
+        if instance.max_blobs > 0 and len(largest_per_target) > instance.max_blobs:
+            # Sort by area (largest first) and keep only top N
+            sorted_targets = sorted(largest_per_target.items(), key=lambda item: item[1][4], reverse=True)
+            largest_per_target = dict(sorted_targets[:instance.max_blobs])
+        
+        # Scale the filtered frame AND blob coordinates if needed
+        if apply_scale != 1.0:
+            h_scaled = int(h * apply_scale)
+            w_scaled = int(w * apply_scale)
+            filtered = cv2.resize(filtered, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
+            
+            # Scale blob coordinates for drawing on the scaled image
+            scaled_blobs = []
+            for target_name, (x, y, w_blob, h_blob, area) in largest_per_target.items():
+                x_scaled = int(x * apply_scale)
+                y_scaled = int(y * apply_scale)
+                w_scaled_blob = int(w_blob * apply_scale)
+                h_scaled_blob = int(h_blob * apply_scale)
+                scaled_blobs.append((target_name, x_scaled, y_scaled, w_scaled_blob, h_scaled_blob, area))
+        else:
+            scaled_blobs = [(name, x, y, w, h, a) for name, (x, y, w, h, a) in largest_per_target.items()]
+        
+        # Draw bounding boxes (one per target, no max_blobs filtering across targets)
+        for target_name, x, y, w_blob, h_blob, area in scaled_blobs:
+            cv2.rectangle(filtered, (x, y), (x + w_blob, y + h_blob), (255, 255, 0), 2)
+            label_text = f"{target_name} ({area}px)"
+            label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+            label_y = max(y - 5, label_size[1] + 5)
+            cv2.putText(filtered, label_text, (x, label_y), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+        
+        # Performance logging
+        if in_auto_mode:
+            try:
+                from android_injections.automation.performance_logger import get_logger
+                get_logger().log_timing("    filter_per_target_mode", (time.time() - t1) * 1000)
+            except:
+                pass
+        return filtered
+    
+    # ============================================================================
+    # SINGLE-TARGET MODE: Show one specific target with original blob detection
+    # ============================================================================
+    else:
+        # Determine which colors to use
+        if manual_target and hasattr(instance, 'target_to_colors') and manual_target in instance.target_to_colors:
+            active_colors = instance.target_to_colors[manual_target]
+        else:
+            # Fallback or invalid target - show nothing
+            black_frame = np.zeros_like(frame)
+            if apply_scale != 1.0:
+                black_frame = cv2.resize(black_frame, (int(w * apply_scale), int(h * apply_scale)), 
+                                        interpolation=cv2.INTER_AREA)
+            return black_frame
+        
+        # Vectorized color matching using lookup table
+        # Create temporary lookup since we're using a specific target's colors
         temp_lookup = np.zeros((256, 256, 256), dtype=bool)
         for b_val, g_val, r_val in active_colors:
             temp_lookup[b_val, g_val, r_val] = True
         b, g, r = frame[:, :, 0], frame[:, :, 1], frame[:, :, 2]
         mask = temp_lookup[b, g, r].astype(np.uint8) * 255
-    else:
-        # Use fancy indexing with the lookup table - super fast!
-        # Extract B, G, R channels
-        b, g, r = frame[:, :, 0], frame[:, :, 1], frame[:, :, 2]
-        # Direct lookup in boolean array
-        mask = instance.color_lookup[b, g, r].astype(np.uint8) * 255
         
-        # Apply bounds filtering for targets that have bounds
-        if hasattr(instance, 'target_bounds') and instance.target_bounds and hasattr(instance, 'target_to_colors'):
-            # Create a bounds mask - start with all zeros
-            bounds_mask = np.zeros((h, w), dtype=np.uint8)
-            
-            # For each target with bounds, mark its search area
-            for target_name, bounds in instance.target_bounds.items():
-                if target_name in instance.target_to_colors:
-                    x1, y1, x2, y2 = bounds
-                    # Clamp to frame boundaries
-                    x1 = max(0, min(w, x1))
-                    x2 = max(0, min(w, x2))
-                    y1 = max(0, min(h, y1))
-                    y2 = max(0, min(h, y2))
-                    
-                    # Mark this area in bounds mask
-                    bounds_mask[y1:y2, x1:x2] = 255
-            
-            # For targets without bounds, they can appear anywhere (full screen)
-            # Create a mask of pixels from targets with bounds
-            bounded_target_colors = set()
-            for target_name, bounds in instance.target_bounds.items():
-                if target_name in instance.target_to_colors:
-                    bounded_target_colors.update(instance.target_to_colors[target_name])
-            
-            # Create lookup for bounded colors
-            if bounded_target_colors:
-                bounded_lookup = np.zeros((256, 256, 256), dtype=bool)
-                for b_val, g_val, r_val in bounded_target_colors:
-                    bounded_lookup[b_val, g_val, r_val] = True
-                
-                # Create mask of bounded pixels
-                bounded_pixels = bounded_lookup[b, g, r].astype(np.uint8) * 255
-                
-                # Apply bounds restriction: bounded pixels only appear in their bounds
-                mask = np.where(bounded_pixels > 0, mask & bounds_mask, mask)
-    
     # Apply excluded regions to mask (set those areas to 0)
     for x_min, y_min, x_max, y_max in instance.excluded_regions:
         # Scale excluded region coordinates to current frame size if needed
@@ -199,7 +260,11 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
     
     t3 = time.time()
     
+    # Time blob processing if we're in auto mode (for performance logging)
+    t_blob_start = time.time()
+    
     # Scale the filtered frame for display if needed
+    # Skip if apply_scale is 1.0 since get_frame_for_display will scale later
     if apply_scale != 1.0:
         h_scaled = int(h * apply_scale)
         w_scaled = int(w * apply_scale)
@@ -214,11 +279,21 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
     
     # Group blobs by target and find the largest blob per target
     if num_labels > 1:
+        # Pre-filter: skip blobs smaller than min_blob_pixels to avoid wasted processing
+        valid_label_indices = []
+        for label_idx in range(1, num_labels):
+            area = stats[label_idx, cv2.CC_STAT_AREA]
+            if area >= instance.min_blob_pixels:
+                valid_label_indices.append(label_idx)
+        
         # Dictionary to track largest blob per target: target_name -> (label_idx, area, x, y, w, h)
         largest_per_target = {}
         
-        # Iterate through all blobs to group by target
-        for label_idx in range(1, num_labels):
+        # Cache blob colors for each blob to avoid recomputing for every target
+        blob_colors_cache = {}
+        
+        # Iterate through valid blobs only
+        for label_idx in valid_label_indices:
             # Get bounding box of this blob
             x = stats[label_idx, cv2.CC_STAT_LEFT]
             y = stats[label_idx, cv2.CC_STAT_TOP]
@@ -230,12 +305,22 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
             # Use best match based on color intersection count
             target_name = "Unknown"
             if hasattr(instance, 'target_to_colors') and instance.target_to_colors:
-                # Collect all colors in this blob using numpy (much faster)
-                blob_mask = (labels == label_idx)
-                blob_pixels = frame[blob_mask]
+                # Collect all colors in this blob ONCE and cache it
+                if label_idx not in blob_colors_cache:
+                    blob_mask = (labels == label_idx)
+                    blob_pixels = frame[blob_mask]
+                    
+                    # Sample pixels if blob is large (>500 pixels)
+                    # Statistical sampling is sufficient for color matching
+                    if len(blob_pixels) > 500:
+                        # Randomly sample 500 pixels from blob
+                        sample_indices = np.random.choice(len(blob_pixels), 500, replace=False)
+                        blob_pixels = blob_pixels[sample_indices]
+                    
+                    # Convert to set of tuples for intersection
+                    blob_colors_cache[label_idx] = set(map(tuple, blob_pixels))
                 
-                # Convert to set of tuples for intersection
-                blob_colors = set(map(tuple, blob_pixels))
+                blob_colors = blob_colors_cache[label_idx]
                 
                 # Find best matching target based on color intersection AND bounds
                 best_target = None
@@ -283,6 +368,12 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
                     if target_match_count > best_target_matches:
                         best_target = tgt_name
                         best_target_matches = target_match_count
+                        
+                        # Early exit: if match quality is >80%, this is clearly the right target
+                        # No need to check remaining targets
+                        match_quality = target_match_count / len(blob_colors) if blob_colors else 0
+                        if match_quality > 0.8:
+                            break
                 
                 # After checking all targets, assign the best match
                 if best_target is None:
@@ -295,6 +386,7 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
                 if target_name not in largest_per_target or area > largest_per_target[target_name][1]:
                     largest_per_target[target_name] = (label_idx, area, x, y, w, h)
         
+        t_blob_end = time.time()
         t4 = time.time()
         
         # Store detected target positions (always store at original unscaled coordinates)
@@ -367,5 +459,19 @@ def filter_unique_colors(instance, frame, apply_scale=1.0):
                   f"Color Match: {(t2-t1)*1000:.1f}ms, "
                   f"Blob Detect: {(t3-t2)*1000:.1f}ms, "
                   f"TOTAL: {(t_end-t_start)*1000:.1f}ms (no blobs)")
+    
+    # Log detailed timing to performance logger if in auto mode
+    if hasattr(instance, 'auto_mode') and instance.auto_mode:
+        try:
+            from android_injections.automation.performance_logger import get_logger
+            logger = get_logger()
+            logger.log_timing("    filter_setup", (t1 - t_start) * 1000)
+            logger.log_timing("    filter_color_match", (t2 - t1) * 1000)
+            logger.log_timing("    filter_blob_detect", (t3 - t2) * 1000)
+            if num_labels > 1:
+                logger.log_timing("    filter_blob_processing", (t_blob_end - t_blob_start) * 1000)
+                logger.log_timing("    filter_drawing", (t5 - t4) * 1000)
+        except:
+            pass  # Silently fail if logger not available
     
     return filtered

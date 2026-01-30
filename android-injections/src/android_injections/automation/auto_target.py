@@ -1,6 +1,8 @@
 """Auto-target selection based on game state (higher_plane and minimap_counter)."""
+from .performance_logger import log_operation
 
 
+@log_operation("get_current_auto_target")
 def get_current_auto_target(instance):
     """
     Determine current target based on higher_plane and minimap_counter state values.
