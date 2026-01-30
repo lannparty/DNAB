@@ -37,7 +37,7 @@ class TestGameConfigInitialization:
             'touch_delay_min', 'touch_delay_max', 'touch_delay_mean', 'touch_delay_std',
             'stability_timer', 'passing_distance', 'pass_pause_duration', 'auto_target_timeout',
             'min_blob_pixels', 'max_blobs', 'colors_per_target',
-            'plane_size', 'plane_count_padding', 'xp_brightness_threshold', 'xp_sample_interval'
+            'plane_size', 'minimap_counter_padding', 'xp_brightness_threshold', 'xp_sample_interval'
         ]
         
         for param in expected_params:
@@ -209,7 +209,7 @@ class TestParameterBounds:
         ('min_blob_pixels', '100', 1, 1000),
         ('max_blobs', '10', 0, 100),
         ('plane_size', '50', 1, 100),
-        ('plane_count_padding', '20', 0, 100),
+        ('minimap_counter_padding', '20', 0, 100),
         ('xp_brightness_threshold', '128', 0, 255),
     ])
     def test_parameter_clamping(self, mock_instance, field, input_val, min_val, max_val):
@@ -299,7 +299,7 @@ class TestConfigDefaults:
         config = GameConfig()
         
         assert config.plane_size > 0
-        assert config.plane_count_padding >= 0
+        assert config.minimap_counter_padding >= 0
     
     def test_xp_detection_defaults(self):
         """Test XP detection parameter defaults."""

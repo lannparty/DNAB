@@ -92,11 +92,11 @@ class WindowCapture:
         # Create targets directory if it doesn't exist
         # Data directories are now in root/data/ folder
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.targets_dir = os.path.join(project_root, 'data', 'targets')
+        self.targets_dir = os.path.join(project_root, 'data', 'internal', 'targets')
         os.makedirs(self.targets_dir, exist_ok=True)
         
         # Create bounds and exclude directories at same level as targets
-        self.bounds_dir = os.path.join(project_root, 'data', 'bounds')
+        self.bounds_dir = os.path.join(project_root, 'data', 'internal', 'bounds')
         self.exclude_dir = os.path.join(project_root, 'data', 'exclude')
         os.makedirs(self.bounds_dir, exist_ok=True)
         os.makedirs(self.exclude_dir, exist_ok=True)
@@ -360,7 +360,7 @@ class WindowCapture:
         self.higher_plane = False  # Whether a black square was detected in minimap
         self.minimap_counter = 0  # Number of distinct pixel groups for minimap_counter target
         self.editing_plane_size = False
-        self.editing_minimap_counter_padding = False
+        self.editing_minimap_padding = False
         
         # Auto-touch state
         self.auto_mode = False
@@ -401,12 +401,12 @@ class WindowCapture:
         self.load_auto_targets()
         
         # Create targets directory if it doesn't exist
-        self.targets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'targets')
+        self.targets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'internal', 'targets')
         os.makedirs(self.targets_dir, exist_ok=True)
         
         # Create bounds and exclude directories at same level as targets
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.bounds_dir = os.path.join(project_root, 'data', 'bounds')
+        self.bounds_dir = os.path.join(project_root, 'data', 'internal', 'bounds')
         self.exclude_dir = os.path.join(project_root, 'data', 'exclude')
         os.makedirs(self.bounds_dir, exist_ok=True)
         os.makedirs(self.exclude_dir, exist_ok=True)
@@ -1336,24 +1336,24 @@ class WindowCapture:
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (70, 70, 70), -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (100, 100, 100), 1)
                 cv2.putText(canvas, "-", (x_pos + 6, state_row_y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                self.minimap_counter_padding_minus_rect = (x_pos, state_row_y, padding_button_width, field_height)
+                self.minimap_padding_minus_rect = (x_pos, state_row_y, padding_button_width, field_height)
                 x_pos += padding_button_width + 2
                 
                 # Minimap padding number field
-                padding_bg_color = (0, 100, 0) if self.editing_minimap_counter_padding else (50, 50, 50)
+                padding_bg_color = (0, 100, 0) if self.editing_minimap_padding else (50, 50, 50)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), padding_bg_color, -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + field_width, state_row_y + field_height), (100, 100, 100), 1)
-                padding_text = self.temp_input if self.editing_minimap_counter_padding else str(self.config.minimap_counter_padding)
+                padding_text = self.temp_input if self.editing_minimap_padding else str(self.config.minimap_padding)
                 cv2.putText(canvas, padding_text, (x_pos + 5, state_row_y + 18),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
-                self.minimap_counter_padding_rect = (x_pos, state_row_y, field_width, field_height)
+                self.minimap_padding_rect = (x_pos, state_row_y, field_width, field_height)
                 x_pos += field_width + 2
                 
                 # Plus button
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (70, 70, 70), -1)
                 cv2.rectangle(canvas, (x_pos, state_row_y), (x_pos + padding_button_width, state_row_y + field_height), (100, 100, 100), 1)
                 cv2.putText(canvas, "+", (x_pos + 5, state_row_y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                self.minimap_counter_padding_plus_rect = (x_pos, state_row_y, padding_button_width, field_height)
+                self.minimap_padding_plus_rect = (x_pos, state_row_y, padding_button_width, field_height)
                 
                 # Counter stable row (new row below state row)
                 counter_stable_row_y = state_row_y + field_height + 10

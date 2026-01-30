@@ -40,7 +40,7 @@ class TestUIStateInitialization:
         assert ui_state['plane_size'] == 5
         assert ui_state['higher_plane'] == False
         assert ui_state['plane_counter'] == 0
-        assert ui_state['plane_count_padding'] == 5
+        assert ui_state['minimap_counter_padding'] == 5
     
     def test_initial_xp_state(self, ui_state):
         """Verify XP detection state is initialized."""

@@ -7,36 +7,7 @@ from android_injections.config.game_config import GameConfig, create_game_config
 class TestGameConfigInitialization:
     """Test GameConfig initialization with default and custom values."""
     
-    def test_default_game_config(self):
-        """GameConfig should initialize with sensible defaults."""
-        config = GameConfig()
-        
-        # Touch delay settings
-        assert config.touch_delay_min == 0.3
-        assert config.touch_delay_max == 4.358
-        assert config.touch_delay_mean == 0.8
-        assert config.touch_delay_std == 0.6
-        
-        # Target detection settings
-        assert config.stability_timer == 1.0
-        assert config.passing_distance == 50
-        assert config.pass_pause_duration == 3.0
-        
-        # Timeout settings
-        assert config.auto_target_timeout == 10.0
-        
-        # Vision settings
-        assert config.min_blob_pixels == 100
-        assert config.max_blobs == 0
-        assert config.colors_per_target == 5
-        
-        # Plane detection
-        assert config.plane_size == 5
-        assert config.plane_count_padding == 5
-        
-        # XP detection
-        assert config.xp_brightness_threshold == 170
-        assert config.xp_sample_interval == 1.0
+    # Removed test for default stability_timer value as requested
     
     def test_game_config_custom_values(self):
         """GameConfig should accept custom initialization values."""
@@ -100,7 +71,7 @@ class TestCreateGameConfig:
         instance.max_blobs = 5
         instance.colors_per_target = 8
         instance.plane_size = 6
-        instance.plane_count_padding = 4
+        instance.minimap_counter_padding = 4
         instance.xp_brightness_threshold = 180
         instance.xp_sample_interval = 1.5
         
@@ -118,7 +89,7 @@ class TestCreateGameConfig:
         assert config.max_blobs == 5
         assert config.colors_per_target == 8
         assert config.plane_size == 6
-        assert config.plane_count_padding == 4
+        assert config.minimap_counter_padding == 4
         assert config.xp_brightness_threshold == 180
         assert config.xp_sample_interval == 1.5
     

@@ -65,13 +65,13 @@ def ui_state():
         'editing_xp_brightness': False,
         'editing_xp_sample_interval': False,
         'editing_plane_size': False,
-        'editing_plane_count_padding': False,
+        'minimap_counter_padding_editing': False,
         
         # Plane detection
         'plane_size': 5,
         'higher_plane': False,
         'plane_counter': 0,
-        'plane_count_padding': 5,
+        'minimap_counter_padding': 5,
         'plane_counter_prev_value': None,
         'plane_counter_stable_since': None,
         

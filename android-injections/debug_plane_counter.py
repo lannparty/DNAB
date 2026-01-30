@@ -15,7 +15,7 @@ class MockInstance:
         self.bounds_dir = os.path.join(script_dir, 'data', 'bounds')
         self.exclude_dir = os.path.join(script_dir, 'data', 'exclude')
         self.colors_per_target = 20
-        self.plane_count_padding = 5
+        self.minimap_counter_padding = 5
 
 instance = MockInstance()
 load_all_targets(instance)
@@ -58,7 +58,7 @@ print(f"  Has target_to_colors: {hasattr(instance, 'target_to_colors')}")
 print(f"  Has 'minimap_counter' in target_to_colors: {has_target}")
 print(f"  Has bounds_with_names: {has_bounds}")
 print(f"  Has 'minimap' bound: {minimap_bound_exists}")
-print(f"  plane_count_padding: {instance.plane_count_padding}")
+print(f"  minimap_counter_padding: {instance.minimap_counter_padding}")
 
 if has_target and minimap_bound_exists:
     print("\n✅ All requirements met for plane counter detection!")

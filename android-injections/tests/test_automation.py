@@ -32,51 +32,51 @@ class TestAutoTargetSelection:
         assert result == "ladder"
     
     def test_get_current_auto_target_higher_plane_one_counter_four(self):
-        """When higher_plane is 1 and plane_counter is 4, target should be 'tightrope'."""
+        """When higher_plane is 1 and minimap_counter is 4, target should be 'tightrope'."""
         instance = Mock()
         instance.state_tracking = True
         instance.higher_plane = 1
-        instance.plane_counter = 4
+        instance.minimap_counter = 4
         
         result = get_current_auto_target(instance)
         assert result == "tightrope"
     
     def test_get_current_auto_target_higher_plane_one_counter_three(self):
-        """When higher_plane is 1 and plane_counter is 3, target should be 'tightrope2'."""
+        """When higher_plane is 1 and minimap_counter is 3, target should be 'tightrope2'."""
         instance = Mock()
         instance.state_tracking = True
         instance.higher_plane = 1
-        instance.plane_counter = 3
+        instance.minimap_counter = 3
         
         result = get_current_auto_target(instance)
         assert result == "tightrope2"
     
     def test_get_current_auto_target_higher_plane_one_counter_two(self):
-        """When higher_plane is 1 and plane_counter is 2, target should be 'rope'."""
+        """When higher_plane is 1 and minimap_counter is 2, target should be 'rope'."""
         instance = Mock()
         instance.state_tracking = True
         instance.higher_plane = 1
-        instance.plane_counter = 2
+        instance.minimap_counter = 2
         
         result = get_current_auto_target(instance)
         assert result == "rope"
     
     def test_get_current_auto_target_higher_plane_one_counter_one(self):
-        """When higher_plane is 1 and plane_counter is 1, target should be 'ladder2'."""
+        """When higher_plane is 1 and minimap_counter is 1, target should be 'ladder2'."""
         instance = Mock()
         instance.state_tracking = True
         instance.higher_plane = 1
-        instance.plane_counter = 1
+        instance.minimap_counter = 1
         
         result = get_current_auto_target(instance)
         assert result == "ladder2"
     
     def test_get_current_auto_target_higher_plane_one_counter_zero(self):
-        """When higher_plane is 1 and plane_counter is 0, target should be 'zipline'."""
+        """When higher_plane is 1 and minimap_counter is 0, target should be 'zipline'."""
         instance = Mock()
         instance.state_tracking = True
         instance.higher_plane = 1
-        instance.plane_counter = 0
+        instance.minimap_counter = 0
         
         result = get_current_auto_target(instance)
         assert result == "zipline"

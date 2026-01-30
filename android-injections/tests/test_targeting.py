@@ -27,6 +27,7 @@ class TestColorAnalysis:
         instance.all_box_colors_by_count = []
         instance.most_common_unique_color = None
         instance.most_common_count = 0
+        instance.bounds_with_names = []  # Fix: make it a real list
         
         from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
@@ -49,6 +50,7 @@ class TestColorAnalysis:
         instance.all_box_colors_by_count = []
         instance.most_common_unique_color = None
         instance.most_common_count = 0
+        instance.bounds_with_names = []  # Fix: make it a real list
         
         from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
@@ -71,6 +73,7 @@ class TestColorAnalysis:
         instance.all_box_colors_by_count = []
         instance.most_common_unique_color = None
         instance.most_common_count = 0
+        instance.bounds_with_names = []  # Fix: make it a real list
         
         from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
@@ -96,6 +99,7 @@ class TestColorAnalysis:
         instance.all_box_colors_by_count = []
         instance.most_common_unique_color = None
         instance.most_common_count = 0
+        instance.bounds_with_names = []  # Fix: make it a real list
         
         from android_injections.targeting.color_analysis import analyze_unique_colors
         analyze_unique_colors(instance)
