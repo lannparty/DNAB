@@ -25,8 +25,8 @@ class GameConfig:
             min_blob_pixels: Minimum blob size in pixels (default 100)
             max_blobs: Maximum blobs to track (0=unlimited, default 0)
             colors_per_target: Number of colors to use for target (default 5)
-            plane_size: Size of black square for plane detection (default 5)
-            minimap_counter_padding: Padding for grouping minimap counter pixels (default 10)
+            plane_size: Size of black square for plane detection (default 20)
+            minimap_counter_padding: Padding for grouping minimap counter pixels (default 6)
             xp_brightness_threshold: Brightness threshold for XP OCR (default 170)
             xp_sample_interval: How often to run OCR in seconds (default 1.0)
         """
@@ -37,7 +37,7 @@ class GameConfig:
         self.touch_delay_std = kwargs.get('touch_delay_std', 0.6)
         
         # Target detection settings
-        self.stability_timer = kwargs.get('stability_timer', 2.0)
+        self.stability_timer = kwargs.get('stability_timer', 1.0)
         self.passing_distance = kwargs.get('passing_distance', 50)
         self.pass_pause_duration = kwargs.get('pass_pause_duration', 3.0)
         self.counter_stability_timer = kwargs.get('counter_stability_timer', 2.0)
@@ -52,8 +52,8 @@ class GameConfig:
         self.colors_per_target = kwargs.get('colors_per_target', 5)
         
         # Plane detection
-        self.plane_size = kwargs.get('plane_size', 5)
-        self.minimap_counter_padding = kwargs.get('minimap_counter_padding', 7)
+        self.plane_size = kwargs.get('plane_size', 20)
+        self.minimap_counter_padding = kwargs.get('minimap_counter_padding', 6)
         
         # XP detection
         self.xp_brightness_threshold = kwargs.get('xp_brightness_threshold', 170)

@@ -69,7 +69,7 @@ def create_ui_state():
         'editing_minimap_counter_padding': False,
         
         # Plane detection
-        'plane_size': 5,
+        'plane_size': 20,
         'higher_plane': False,
         'minimap_counter': 0,
         'minimap_counter_padding': 5,

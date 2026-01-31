@@ -382,7 +382,7 @@ class MirrorWindow(QMainWindow):
         # Plane Size (editable with +/-)
         plane_row.addWidget(QLabel("plane\nsize"))
         self.plane_size_minus_btn = self._create_mini_button("-", self.decrease_plane_size)
-        self.plane_size_display = QLabel("5")
+        self.plane_size_display = QLabel("20")
         self.plane_size_display.setMinimumWidth(70)
         self.plane_size_display.setMaximumWidth(70)
         self.plane_size_display.setFixedHeight(28)
@@ -1018,7 +1018,7 @@ class MirrorWindow(QMainWindow):
                 self.plane_size_display.setText(field_temp_input + "_")
                 self.plane_size_display.setStyleSheet(editing_style)
             else:
-                plane_size = getattr(self.capture.config, 'plane_size', 5)
+                plane_size = getattr(self.capture.config, 'plane_size', 20)
                 self.plane_size_display.setText(str(plane_size))
                 self.plane_size_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
             
@@ -1082,7 +1082,7 @@ class MirrorWindow(QMainWindow):
                 self.plane_size_display.setText(field_temp_input + "_")
                 self.plane_size_display.setStyleSheet(editing_style)
             else:
-                plane_size = getattr(self.capture.config, 'plane_size', 5)
+                plane_size = getattr(self.capture.config, 'plane_size', 20)
                 self.plane_size_display.setText(str(plane_size))
                 self.plane_size_display.setStyleSheet("background-color: #2a2a2a; padding: 5px 10px; border: 1px solid #555; border-radius: 3px; color: #e0e0e0; font-weight: 600;")
             

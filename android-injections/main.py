@@ -76,7 +76,7 @@ class QtWindowCapture(WindowCapture):
 
     @property
     def plane_size(self):
-        return self.config.plane_size if hasattr(self, 'config') else 5
+        return self.config.plane_size if hasattr(self, 'config') else 20
     @plane_size.setter
     def plane_size(self, value):
         if hasattr(self, 'config'):
@@ -339,15 +339,13 @@ class QtWindowCapture(WindowCapture):
         self.next_touch_interval = self.config.touch_delay_mean
         self.auto_target_list = []
         self.auto_target_index = 0
-        self.auto_target_passed = False
-        self.auto_target_touched = False
+        self.auto_previous_target = None
         self.auto_touched_time = None
         self.auto_target_prev_pos = None
         self.auto_target_stable_since = None
         self.auto_touched_position = None
         self.auto_dot_prev_pos = None
         self.auto_dot_stable_since = None
-        self.auto_target_last_seen = None
         self.auto_target_timeout = 10.0
         self.xp_last_value = None
         self.xp_current_reading = None

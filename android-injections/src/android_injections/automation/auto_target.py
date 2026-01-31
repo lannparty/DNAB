@@ -13,11 +13,11 @@ def get_current_auto_target(instance):
     
     Target mapping:
     - higher_plane=0: 'ladder' (ground level)
-    - higher_plane=1, counter=4: 'tightrope'
+    - higher_plane=1, counter=4: 'zipline'
     - higher_plane=1, counter=3: 'tightrope2'
     - higher_plane=1, counter=2: 'rope'
     - higher_plane=1, counter=1: 'ladder2'
-    - higher_plane=1, counter=0: 'zipline'
+    - higher_plane=1, counter=0: 'tightrope'
     
     Args:
         instance: Instance with state_tracking, higher_plane, and minimap_counter attributes

@@ -28,6 +28,7 @@ def evaluate_state_fields(instance, frame):
             - plane_size: Kernel size for black square detection
             - minimap_counter: Number of distinct groups in minimap
             - minimap_counter_prev_value: Previous counter value
+            - minimap_counter_prev_centroids: Previous centroids for position stability
             - minimap_counter_stable_since: When counter became stable
             - minimap_counter_padding: Padding for connecting nearby pixels
             - stability_timer: Stability check interval
@@ -195,26 +196,63 @@ def evaluate_state_fields(instance, frame):
                         # Subtract 1 because label 0 is background
                         new_counter_value = num_labels - 1
                         
+                        # Calculate centroids of connected components for position stability
+                        centroids = []
+                        if new_counter_value > 0:
+                            for label in range(1, num_labels):  # Skip background (0)
+                                component_mask = (labels == label)
+                                # Calculate centroid
+                                moments = cv2.moments(component_mask.astype(np.uint8))
+                                if moments['m00'] != 0:
+                                    cx = int(moments['m10'] / moments['m00'])
+                                    cy = int(moments['m01'] / moments['m00'])
+                                    centroids.append((cx, cy))
+                        
                         # Store mask and minimap bounds for visualization
                         instance.minimap_counter_mask = mask
                         instance.minimap_counter_bounds = (x1, y1, x2, y2)
                         
-                        # Track stability of minimap_counter value
+                        # Track stability of minimap_counter pixel positions (not just count)
                         current_time = time.time()
-                        if instance.minimap_counter_prev_value is not None and new_counter_value == instance.minimap_counter_prev_value:
-                            # Value unchanged
+                        centroids_changed = False
+                        
+                        if instance.minimap_counter_prev_centroids is not None:
+                            # Check if centroids have changed significantly
+                            if len(centroids) == len(instance.minimap_counter_prev_centroids):
+                                # Same number of components, check if positions are similar
+                                total_movement = 0
+                                for curr_centroid, prev_centroid in zip(centroids, instance.minimap_counter_prev_centroids):
+                                    cx1, cy1 = curr_centroid
+                                    cx2, cy2 = prev_centroid
+                                    movement = abs(cx1 - cx2) + abs(cy1 - cy2)
+                                    total_movement += movement
+                                
+                                # Consider stable if total movement is small (less than 10 pixels per component)
+                                max_allowed_movement = len(centroids) * 10
+                                centroids_changed = total_movement > max_allowed_movement
+                            else:
+                                # Different number of components
+                                centroids_changed = True
+                        else:
+                            # First detection
+                            centroids_changed = False
+                        
+                        if not centroids_changed:
+                            # Positions unchanged or minimally changed
                             if instance.minimap_counter_stable_since is None:
                                 instance.minimap_counter_stable_since = current_time
                         else:
-                            # Value changed, reset stability
+                            # Positions changed significantly, reset stability
                             instance.minimap_counter_stable_since = None
                         
                         instance.minimap_counter = new_counter_value
                         instance.minimap_counter_prev_value = new_counter_value
+                        instance.minimap_counter_prev_centroids = centroids
                     except Exception as e:
                         instance.minimap_counter = 0
                         instance.minimap_counter_prev_value = None
                         instance.minimap_counter_stable_since = None
+                        instance.minimap_counter_prev_centroids = None
                 break
         
         if not minimap_bound_found:

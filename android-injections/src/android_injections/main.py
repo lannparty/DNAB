@@ -32,6 +32,12 @@ from android_injections.automation.delay_manager import calculate_next_delay, is
 from android_injections.automation.state_manager import reset_auto_state, is_target_stable, is_dot_stable, check_target_passed, check_target_timeout
 from android_injections.config.game_config import create_game_config, GameConfig
 
+# Import hardware touch functions
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from hardware_touch import send_touch_adb_shell, transform_coords, init_adb
+
 try:
     import Xlib
     import Xlib.display
@@ -75,6 +81,9 @@ class WindowCapture:
             min_blob_pixels=2,
             max_blobs=0,
         )
+        
+        # Initialize ADB connection
+        init_adb()
         
         self.display = Xlib.display.Display()
         self.root = self.display.screen().root
@@ -294,15 +303,13 @@ class WindowCapture:
         
         self.auto_target_list = []  # List of target names from targets folder
         self.auto_target_index = 0  # Current target index
-        self.auto_target_passed = False  # Whether target passed (XP gained)
-        self.auto_target_touched = False  # Whether we've touched the current target at least once
+        self.auto_previous_target = None  # Previous target name to detect state changes
         self.auto_touched_time = None  # Time when target was touched (for pass pause)
         self.auto_target_prev_pos = None  # Previous position (x, y, w, h) for motion detection
         self.auto_target_stable_since = None  # Time when target became stable
         self.auto_touched_position = None  # Position (x, y) where target was touched
         self.auto_dot_prev_pos = None  # Previous dot position (x, y) for stability tracking
         self.auto_dot_stable_since = None  # Time when dot became stable
-        self.auto_target_last_seen = None  # Last time any target was detected (for timeout)
         self.load_auto_targets()
         
         # Create targets directory if it doesn't exist
@@ -831,13 +838,7 @@ class WindowCapture:
                         time_until_next = self.next_touch_interval - (current_time - self.last_auto_touch)
                         
                         # Determine current state
-                        if self.auto_target_passed:
-                            status_text = " [passed]"
-                            status_color = (100, 255, 100)
-                        elif self.auto_target_touched:
-                            status_text = " [checking pass]"
-                            status_color = (255, 200, 100)
-                        elif time_until_next > 0:
+                        if time_until_next > 0:
                             status_text = f" [wait {time_until_next:.1f}s]"
                             status_color = (200, 200, 100)
                         else:
@@ -1304,6 +1305,32 @@ class WindowCapture:
                     
                     print(f"[AUTO] Current target: {current_target}, Detected: {list(self.detected_targets.keys()) if self.detected_targets else 'none'}")
                     
+                    # Check if target has changed due to state change
+                    # Only switch if minimap counter is stable (to prevent rapid switching on noisy data)
+                    counter_stable_duration = 0
+                    if hasattr(self, 'minimap_counter_stable_since') and self.minimap_counter_stable_since is not None:
+                        counter_stable_duration = current_time - self.minimap_counter_stable_since
+                    
+                    counter_is_stable = counter_stable_duration >= self.config.stability_timer
+                    
+                    if (current_target != self.auto_previous_target and 
+                        current_target is not None and 
+                        counter_is_stable):
+                        print(f"[Auto] State changed and counter stable, switching to new target: '{current_target}' (was '{self.auto_previous_target}')")
+                        # Reset all auto state for the new target
+                        self.auto_touched_time = None
+                        self.auto_target_prev_pos = None
+                        self.auto_target_stable_since = None
+                        self.auto_touched_position = None
+                        self.auto_dot_prev_pos = None
+                        self.auto_dot_stable_since = None
+                        # Reset touch cooldown so we can touch immediately
+                        self.last_auto_touch = current_time - self.next_touch_interval
+                        self.auto_previous_target = current_target
+                    elif current_target != self.auto_previous_target and current_target is not None and not counter_is_stable:
+                        print(f"[Auto] State changed but counter not stable yet ({counter_stable_duration:.1f}s/{self.config.stability_timer}s), waiting...")
+                        # Don't switch target yet, counter needs to stabilize
+                    
                     if current_target:
                         
                         # Get white dot position (screen center in display coordinates)
@@ -1381,18 +1408,14 @@ class WindowCapture:
                             # Update previous position
                             self.auto_target_prev_pos = current_pos
                             
-                            # Check passing condition: XP gained after touching
-                            if self.auto_target_touched and self.xp_detected != "0":
-                                # XP was gained, target is passed
-                                self.auto_target_passed = True
-                            
-                            # Touch target at interval if not yet passed, time elapsed, and target is stable
+                            # Touch target at interval if time elapsed and target is stable
                             time_ready = current_time - self.last_auto_touch >= self.next_touch_interval
-                            if not self.auto_target_passed and time_ready and target_is_stable:
-                                cmd = f"adb shell input tap {target_center_x} {target_center_y}"
-                                print(f"[Auto] Touching '{current_target}' at ({target_center_x}, {target_center_y})")
+                            if time_ready and target_is_stable:
+                                # Convert view coordinates to hardware coordinates
+                                x_hw, y_hw = transform_coords(target_center_x, target_center_y)
+                                print(f"[Auto] Touching '{current_target}' at view ({target_center_x}, {target_center_y}) -> hw ({x_hw}, {y_hw})")
                                 try:
-                                    subprocess.run(cmd.split(), check=True, capture_output=True)
+                                    send_touch_adb_shell(x_hw, y_hw)
                                 except Exception as e:
                                     print(f"[Auto] Touch error: {e}")
                                 
@@ -1400,50 +1423,17 @@ class WindowCapture:
                                 self.last_auto_touch = current_time
                                 self.next_touch_interval = np.random.normal(self.config.touch_delay_mean, self.config.touch_delay_std)
                                 self.next_touch_interval = max(self.config.touch_delay_min, min(self.config.touch_delay_max, self.next_touch_interval))
-                                # Mark that we've touched this target and store the position and time
-                                self.auto_target_touched = True
+                                # Store the position and time
                                 self.auto_touched_position = (target_center_x, target_center_y)
                                 self.auto_touched_time = current_time
                                 # Reset stability tracking after touch
                                 self.auto_target_stable_since = None
                         else:
-                            # Target not detected
-                            # If we've touched and gained XP, mark as passed
-                            if self.auto_target_touched and self.xp_detected != "0":
-                                self.auto_target_passed = True
-                            
-                            # Check for timeout - if no target seen for 10 seconds, skip to next
-                            if self.auto_target_last_seen is not None:
-                                time_since_last_seen = current_time - self.auto_target_last_seen
-                                if time_since_last_seen >= self.auto_target_timeout:
-                                    print(f"[Auto] Target '{current_target}' not detected for {self.auto_target_timeout}s, skipping to next target")
-                                    self.auto_target_passed = True
-                            else:
-                                # First time in auto mode, initialize last seen time
-                                self.auto_target_last_seen = current_time
-                            
-                            # Reset stability timer but keep previous position
+                            # Target not detected - reset stability timer but keep previous position
                             # This allows stability to resume if target reappears in same position
                             self.auto_target_stable_since = None
                             # Reset touch cooldown so we can touch immediately when target reappears (after stability)
                             self.last_auto_touch = current_time - self.next_touch_interval
-                        
-                        # If target has been passed, reset auto state
-                        if self.auto_target_passed:
-                            self.auto_target_passed = False
-                            self.auto_target_touched = False
-                            self.auto_touched_time = None
-                            self.auto_target_prev_pos = None
-                            self.auto_target_stable_since = None
-                            self.auto_touched_position = None
-                            self.auto_dot_prev_pos = None
-                            self.auto_dot_stable_since = None
-                            self.auto_target_last_seen = current_time  # Reset timeout
-                            new_target = self.get_current_auto_target()
-                            if new_target:
-                                print(f"[Auto] Target passed, state updated. New target: '{new_target}'")
-                            else:
-                                print(f"[Auto] Target passed, state updated. Waiting for state detection...")
                 
                 # Move window after first frame is displayed (ensures window exists)
                 if not window_positioned:

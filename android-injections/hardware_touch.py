@@ -20,6 +20,19 @@ VIEW_W, VIEW_H = 2340, 1080  # swap if needed
 # Rotation: "cw" = clockwise, "ccw" = counterclockwise
 ROTATION = "cw"  # 90° clockwise
 
+def init_adb():
+    """Initialize ADB connection and check availability."""
+    try:
+        result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, timeout=5)
+        if 'device' not in result.stdout:
+            print("Warning: No ADB devices found")
+            return False
+        print("ADB initialized successfully")
+        return True
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        print(f"ADB initialization failed: {e}")
+        return False
+
 def transform_coords(x_view, y_view):
     """Convert view coordinates to hardware coordinates based on rotation."""
     if ROTATION == "cw":  # 90° clockwise

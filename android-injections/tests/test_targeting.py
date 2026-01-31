@@ -131,6 +131,11 @@ class TestTargetLoading:
                 json.dump(target_data, f)
             
             instance = Mock()
+            # Configure Mock to not have internal directory attributes
+            instance.configure_mock(**{
+                'internal_targets_dir': None,
+                'internal_bounds_dir': None
+            })
             instance.targets_dir = targets_dir
             instance.bounds_dir = bounds_dir
             instance.exclude_dir = os.path.join(tmpdir, 'exclude')
@@ -174,6 +179,11 @@ class TestTargetLoading:
                 json.dump(bounds_data, f)
             
             instance = Mock()
+            # Configure Mock to not have internal directory attributes
+            instance.configure_mock(**{
+                'internal_targets_dir': None,
+                'internal_bounds_dir': None
+            })
             instance.targets_dir = targets_dir
             instance.bounds_dir = bounds_dir
             instance.exclude_dir = os.path.join(tmpdir, 'exclude')
@@ -255,6 +265,11 @@ class TestTargetSaving:
             os.makedirs(targets_dir)
             
             instance = Mock()
+            # Configure Mock to not have internal directory attributes
+            instance.configure_mock(**{
+                'internal_targets_dir': None,
+                'internal_bounds_dir': None
+            })
             instance.targets_dir = targets_dir
             instance.bounds_dir = bounds_dir
             instance.exclude_dir = os.path.join(tmpdir, 'exclude')
@@ -362,6 +377,11 @@ class TestColorLookupTable:
                 json.dump(target_data, f)
             
             instance = Mock()
+            # Configure Mock to not have internal directory attributes
+            instance.configure_mock(**{
+                'internal_targets_dir': None,
+                'internal_bounds_dir': None
+            })
             instance.targets_dir = targets_dir
             instance.bounds_dir = bounds_dir
             instance.exclude_dir = os.path.join(tmpdir, 'exclude')
@@ -417,6 +437,11 @@ class TestUniqueFingerprints:
                 json.dump(target2, f)
             
             instance = Mock()
+            # Configure Mock to not have internal directory attributes
+            instance.configure_mock(**{
+                'internal_targets_dir': None,
+                'internal_bounds_dir': None
+            })
             instance.targets_dir = targets_dir
             instance.bounds_dir = bounds_dir
             instance.exclude_dir = os.path.join(tmpdir, 'exclude')
