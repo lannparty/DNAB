@@ -283,50 +283,5 @@ def render_frame(window_capture_instance, display_frame, window_title):
     self.max_blobs_minus_rect = (0, 0, 0, 0)
     self.max_blobs_plus_rect = (0, 0, 0, 0)
     
-    # Draw touch feedback (red X marks)
-    import time
-    draw_touch_feedback(display_frame, self.touch_feedback_positions, self.touch_feedback_duration, time.time())
-    
     # Display the frame
     cv2.imshow(window_title, canvas)
-
-
-def draw_touch_feedback(display_frame, touch_positions, feedback_duration, current_time):
-    """Draw red X marks at recent touch positions.
-    
-    Args:
-        display_frame: The frame to draw on
-        touch_positions: List of (x, y, timestamp) tuples
-        feedback_duration: How long to show feedback in seconds
-        current_time: Current time for filtering old touches
-    """
-    if not touch_positions:
-        return
-    
-    # Filter out old touch positions
-    recent_touches = [
-        (x, y) for x, y, timestamp in touch_positions 
-        if current_time - timestamp <= feedback_duration
-    ]
-    
-    # Draw red X at each recent touch position
-    for x, y in recent_touches:
-        # Scale coordinates if needed (assuming display_frame is already scaled)
-        x_scaled = int(x)
-        y_scaled = int(y)
-        
-        # Draw X with lines
-        line_length = 10
-        thickness = 2
-        
-        # Top-left to bottom-right
-        cv2.line(display_frame, 
-                (x_scaled - line_length, y_scaled - line_length),
-                (x_scaled + line_length, y_scaled + line_length),
-                (0, 0, 255), thickness)
-        
-        # Top-right to bottom-left
-        cv2.line(display_frame,
-                (x_scaled + line_length, y_scaled - line_length),
-                (x_scaled - line_length, y_scaled + line_length),
-                (0, 0, 255), thickness)

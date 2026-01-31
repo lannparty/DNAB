@@ -113,10 +113,6 @@ def create_ui_state():
         'auto_target_last_seen': None,
         'auto_target_timeout': 10.0,
         
-        # Touch feedback visualization
-        'touch_feedback_positions': [],  # List of (x, y, timestamp) tuples for recent touches
-        'touch_feedback_duration': 0.5,  # How long to show touch feedback in seconds
-        
         # Data structures
         'filter_colors': set(),
         'unique_colors': set(),
