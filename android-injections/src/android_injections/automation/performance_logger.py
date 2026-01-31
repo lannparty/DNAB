@@ -12,13 +12,11 @@ class PerformanceLogger:
     def __init__(self, log_dir=None):
         """Initialize performance logger with log directory."""
         if log_dir is None:
-            # Default to log directory at repo root
+            # Default to log/performance directory at repo root
             repo_root = Path(__file__).parent.parent.parent.parent.parent
-            log_dir = repo_root / "log"
-        
+            log_dir = repo_root / "log" / "performance"
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(exist_ok=True)
-        
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         # Create timestamped log file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log_file = self.log_dir / f"auto_performance_{timestamp}.log"

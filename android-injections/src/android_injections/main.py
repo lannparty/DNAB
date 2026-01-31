@@ -283,109 +283,8 @@ class WindowCapture:
         expected_height = 2340
         leeway = 5
         
-        # Check portrait orientation (1080x2340)
-        portrait_match = (expected_width - leeway <= client_width <= expected_width + leeway and 
-                         expected_height - leeway <= client_height <= expected_height + leeway)
-        
-        # Check landscape orientation (2340x1080)
-        landscape_match = (expected_height - leeway <= client_width <= expected_height + leeway and 
-                          expected_width - leeway <= client_height <= expected_width + leeway)
-        
-        if not (portrait_match or landscape_match):
-            print(f"\n⚠️  ERROR: Window resolution mismatch!")
-            print(f"Expected: {expected_width}x{expected_height} or {expected_height}x{expected_width} (±{leeway}px) (Pixel 4a 5G)")
-            print(f"Got: {client_width}x{client_height}")
-            print(f"\nPlease resize the emulator window to match the phone's resolution.")
-            return
-        
-        x, y, width, height = self.get_window_geometry(self.window)
-        print(f"Found window at: x={x}, y={y}, width={width}, height={height}")
-        
-        # Calculate position for mirror window - directly below source window
-        # Keep same x coordinate (even if negative) to stay aligned
-        mirror_x = x
-        mirror_y = y + height + 30  # 30 pixels gap for window decorations
-        
-        # Create display window with NORMAL flag to prevent auto-resizing
-        window_title = f"Mirror: {self.window_name}"
-        cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
-        
-        # Set window to be non-resizable to prevent size changes when filter toggles
-        cv2.setWindowProperty(window_title, cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_AUTOSIZE)
-        
-        print(f"Mirror window will be positioned at: x={mirror_x}, y={mirror_y}")
-        print(f"Initial window dimensions: {width}x{height}")
-        print(f"Target FPS: {self.target_fps}")
-        
-        frame_count = 0
-        start_time = time.time()
-        window_positioned = False
-        
-        # Rectangle selection state
-        self.selecting = False
-        self.selection_start = None
-        self.selection_end = None
-        self.target_selection_rect = None  # Selection for target mode
-        self.bounds_selection_rect = None  # Selection for bounds mode
-        self.exclude_selection_rect = None  # Selection for exclude mode
-        self.current_frame = None
-        self.unique_colors = set()
-        self.show_filtered = False
-        self.unique_only = True  # Toggle for capturing only unique colors vs all colors
-        self.target_name = ""
-        self.text_input_active = False
-        self.target_selector_active = False
-        self.target_mode = False  # Toggle for target mode
-        self.bounds_mode = False  # Toggle for bounds mode
-        self.exclude_mode = False  # Toggle for exclude mode
-        self.state_tracking = False  # Toggle for state field evaluation
-        self.excluded_regions = []  # List of (x1, y1, x2, y2) tuples to exclude from filter
-        self.show_bounds = False  # Toggle to show all bounds rectangles
-        self.show_excludes = False  # Toggle to show all exclude rectangles
-        self.auto_view_mode = False  # Toggle to show only current auto target in blob detection
-        
-        # Editing state for number fields
-        self.editing_colors = False
-        self.editing_min_pixels = False
-        self.editing_max_blobs = False
-        self.editing_delay_min = False
-        self.editing_delay_max = False
-        self.editing_delay_mean = False
-        self.editing_delay_std = False
-        self.editing_stability = False
-        self.editing_passing_dist = False
-        self.temp_input = ""
-        
-        # Plane detection state
-        self.higher_plane = False  # Whether a black square was detected in minimap
-        self.minimap_counter = 0  # Number of distinct pixel groups for minimap_counter target
-        self.editing_plane_size = False
-        self.editing_minimap_padding = False
-        
-        # Auto-touch state
-        self.auto_mode = False
-        self.last_auto_touch = 0
-        self.next_touch_interval = self.config.touch_delay_mean  # Start with mean
-        
-        # XP detection state (uses same stability timer as targets)
-        self.xp_last_value = None  # Last stable XP value (confirmed for stability_timer seconds)
-        self.xp_current_reading = None  # Current OCR reading
-        self.xp_reading_first_seen = None  # Timestamp when current reading was first seen
-        self.xp_last_sample_time = 0  # Last time we sampled XP with OCR
-        self.xp_trigger_time = None  # Timestamp when XP increases
-        self.xp_detected = "0"
-        self.editing_xp_brightness = False
-        self.editing_xp_sample_interval = False
-        
-        # Create CLAHE object once (reused for all XP OCR preprocessing)
-        self._clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        
-        # Minimap counter stability tracking
-        self.minimap_counter_prev_value = None
-        self.minimap_counter_stable_since = None
-        
-        # Cache for text sizes to avoid repeated cv2.getTextSize calls
-        self._text_size_cache = {}
+        # The OpenCV UI and event loop have been removed. Use the PyQt6 UI (main.py) for all interactive features.
+        # Backend logic and data processing remain available for use by the PyQt6 interface.
         
         self.auto_target_list = []  # List of target names from targets folder
         self.auto_target_index = 0  # Current target index
@@ -1629,10 +1528,7 @@ def kill_existing_instances():
     current_pid = os.getpid()
     current_script = os.path.abspath(__file__)
     
-    # Also check for main_qt.py instances
-    # main.py is at: android-injections/src/android_injections/main.py
-    # main_qt.py is at: android-injections/main_qt.py (3 levels up)
-    main_qt_script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(current_script))), 'main_qt.py')
+    # No longer need to check for main_qt.py instances (merged into main.py)
     
     killed_count = 0
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -1647,7 +1543,7 @@ def kill_existing_instances():
                 # Check if any of the command line args match our script paths
                 for arg in cmdline:
                     arg_abs = os.path.abspath(arg) if os.path.exists(arg) else arg
-                    if arg_abs == current_script or arg_abs == main_qt_script:
+                    if arg_abs == current_script:
                         print(f"Killing existing instance (PID: {proc.pid})")
                         proc.terminate()
                         try:
