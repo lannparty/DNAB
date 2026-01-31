@@ -32,7 +32,7 @@ def get_current_auto_target(instance):
         return "ladder"
     elif instance.higher_plane == 1:
         if instance.minimap_counter == 4:
-            return "tightrope"
+            return "zipline"
         elif instance.minimap_counter == 3:
             return "tightrope2"
         elif instance.minimap_counter == 2:
@@ -40,6 +40,6 @@ def get_current_auto_target(instance):
         elif instance.minimap_counter == 1:
             return "ladder2"
         elif instance.minimap_counter == 0:
-            return "zipline"
+            return "tightrope"
     
     return None

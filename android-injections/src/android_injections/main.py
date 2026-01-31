@@ -73,7 +73,7 @@ class WindowCapture:
         self.config = GameConfig(
             colors_per_target=20,
             min_blob_pixels=2,
-            max_blobs=1,
+            max_blobs=0,
         )
         
         self.display = Xlib.display.Display()
@@ -92,11 +92,17 @@ class WindowCapture:
         # Create targets directory if it doesn't exist
         # Data directories are now in root/data/ folder
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.targets_dir = os.path.join(project_root, 'data', 'internal', 'targets')
+        self.targets_dir = os.path.join(project_root, 'data', 'targets')
         os.makedirs(self.targets_dir, exist_ok=True)
-        
+
+        # Internal targets/bounds directories
+        self.internal_targets_dir = os.path.join(project_root, 'data', 'internal', 'targets')
+        os.makedirs(self.internal_targets_dir, exist_ok=True)
+        self.internal_bounds_dir = os.path.join(project_root, 'data', 'internal', 'bounds')
+        os.makedirs(self.internal_bounds_dir, exist_ok=True)
+
         # Create bounds and exclude directories at same level as targets
-        self.bounds_dir = os.path.join(project_root, 'data', 'internal', 'bounds')
+        self.bounds_dir = os.path.join(project_root, 'data', 'bounds')
         self.exclude_dir = os.path.join(project_root, 'data', 'exclude')
         os.makedirs(self.bounds_dir, exist_ok=True)
         os.makedirs(self.exclude_dir, exist_ok=True)
@@ -300,12 +306,12 @@ class WindowCapture:
         self.load_auto_targets()
         
         # Create targets directory if it doesn't exist
-        self.targets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'internal', 'targets')
+        self.targets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'targets')
         os.makedirs(self.targets_dir, exist_ok=True)
-        
+
         # Create bounds and exclude directories at same level as targets
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.bounds_dir = os.path.join(project_root, 'data', 'internal', 'bounds')
+        self.bounds_dir = os.path.join(project_root, 'data', 'bounds')
         self.exclude_dir = os.path.join(project_root, 'data', 'exclude')
         os.makedirs(self.bounds_dir, exist_ok=True)
         os.makedirs(self.exclude_dir, exist_ok=True)

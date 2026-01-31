@@ -37,9 +37,17 @@ def load_all_targets(instance):
     target_bounds = {}  # Map target names to their search bounds
     
     try:
+        # List of special targets/bounds to load from internal dirs
+        internal_targets = {"minimap_counter", "hit", "miss", "xp"}
+
         # Get all JSON files in targets directory
         json_files = [f for f in os.listdir(instance.targets_dir) if f.endswith('.json')]
-        
+        # Add internal target files if present (avoid duplicates)
+        if hasattr(instance, 'internal_targets_dir'):
+            for f in os.listdir(instance.internal_targets_dir):
+                if f.endswith('.json') and f[:-5] in internal_targets and f not in json_files:
+                    json_files.append(f)
+
         # Load bounds files from bounds directory
         instance.bounds_with_names = []  # List of (x1, y1, x2, y2, name) tuples
         if os.path.exists(instance.bounds_dir):
@@ -56,19 +64,38 @@ def load_all_targets(instance):
                             instance.bounds_with_names.append(tuple(bounds) + (target_name,))
                 except Exception as e:
                     print(f"Error loading bounds from {bounds_file}: {e}")
-        
+        # Add internal bounds for minimap and xp if present
+        if hasattr(instance, 'internal_bounds_dir'):
+            for f in os.listdir(instance.internal_bounds_dir):
+                if f.endswith('.json') and f[:-5] in {"minimap", "xp"}:
+                    filepath = os.path.join(instance.internal_bounds_dir, f)
+                    try:
+                        with open(filepath, 'r') as fobj:
+                            data = json.load(fobj)
+                            target_name = data.get('target_name')
+                            bounds = data.get('bounds')
+                            if target_name and bounds and len(bounds) == 4:
+                                target_bounds[target_name] = tuple(bounds)
+                                instance.bounds_with_names.append(tuple(bounds) + (target_name,))
+                    except Exception as e:
+                        print(f"Error loading internal bounds from {f}: {e}")
+
         for filename in json_files:
-            filepath = os.path.join(instance.targets_dir, filename)
+            # Use internal_targets_dir for special targets
+            if hasattr(instance, 'internal_targets_dir') and filename[:-5] in internal_targets:
+                filepath = os.path.join(instance.internal_targets_dir, filename)
+            else:
+                filepath = os.path.join(instance.targets_dir, filename)
             try:
                 with open(filepath, 'r') as f:
                     data = json.load(f)
                     colors = data.get('colors', [])
                     # Remove .json extension for cleaner labels
                     target_name = filename[:-5] if filename.endswith('.json') else filename
-                    
+
                     # Track colors for this target
                     target_colors = set()
-                    
+
                     # Convert colors to tuples and add to set with mapping
                     # Only use the first colors_per_target colors (they're already sorted by prevalence)
                     for i, color in enumerate(colors):
@@ -77,18 +104,18 @@ def load_all_targets(instance):
                         color_tuple = tuple(color)
                         all_colors.add(color_tuple)
                         target_colors.add(color_tuple)
-                        
+
                         # Track first occurrence for labeling
                         if color_tuple not in color_to_target:
                             color_to_target[color_tuple] = target_name
-                        
+
                         # Track all occurrences for duplicate detection
                         if color_tuple not in color_to_all_targets:
                             color_to_all_targets[color_tuple] = []
                         color_to_all_targets[color_tuple].append(target_name)
-                    
+
                     target_to_colors[target_name] = target_colors
-                    
+
                     loaded_files.append(filename)
             except Exception as e:
                 print(f"Error loading {filename}: {e}")
@@ -196,3 +223,8 @@ def load_all_targets(instance):
     
     # Load excluded regions
     load_excluded_regions(instance)
+    
+    # DEBUG: Print all loaded bounds after loading
+    print("[DEBUG] bounds_with_names after loading:")
+    for b in instance.bounds_with_names:
+        print("  ", b)

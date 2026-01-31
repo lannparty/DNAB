@@ -492,6 +492,34 @@ class QtWindowCapture(WindowCapture):
                 t_start = time.perf_counter()
                 display_frame = self.filter_unique_colors(frame_bgr.copy(), apply_scale=self.display_scale)
                 t_filter = (time.perf_counter() - t_start) * 1000
+                # Draw bounds for selected target if available, scaling coordinates for display
+                if hasattr(self, 'detected_targets') and hasattr(self, 'target_bounds'):
+                    # Use current auto target if in auto_mode, else manual_target_name or selected_target_index
+                    selected_target = None
+                    if hasattr(self, 'auto_mode') and self.auto_mode:
+                        selected_target = self.get_current_auto_target()
+                    elif hasattr(self, 'manual_target_name') and self.manual_target_name:
+                        selected_target = self.manual_target_name
+                    elif hasattr(self, 'selected_target_index'):
+                        target_list = list(self.detected_targets.keys())
+                        if target_list:
+                            selected_target = target_list[self.selected_target_index % len(target_list)]
+                    if selected_target:
+                        bounds = self.target_bounds.get(selected_target)
+                        if bounds:
+                            bx1, by1, bx2, by2 = bounds
+                            scale = self.display_scale if hasattr(self, 'display_scale') else 1.0
+                            bx1 = int(bx1 * scale)
+                            by1 = int(by1 * scale)
+                            bx2 = int(bx2 * scale)
+                            by2 = int(by2 * scale)
+                            cv2.rectangle(display_frame, (bx1, by1), (bx2, by2), (0, 255, 255), 2)
+                            font_scale = 1.2
+                            thickness = 3
+                            label_size = cv2.getTextSize(selected_target, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                            label_y = max(by1 - 10, label_size[1] + 10)
+                            cv2.putText(display_frame, selected_target, (bx1, label_y), 
+                                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 255), thickness)
             else:
                 display_frame = frame_bgr.copy()
                 t_start = time.perf_counter()
@@ -519,20 +547,26 @@ class QtWindowCapture(WindowCapture):
                     for bound in self.bounds_with_names:
                         bx1, by1, bx2, by2, name = bound
                         cv2.rectangle(display_frame, (bx1, by1), (bx2, by2), (0, 255, 255), 2)
-                        label_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-                        label_y = max(by1 - 5, label_size[1] + 5)
+                        # Increased font scale and thickness for readability
+                        font_scale = 1.2
+                        thickness = 3
+                        label_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                        label_y = max(by1 - 10, label_size[1] + 10)
                         cv2.putText(display_frame, name, (bx1, label_y), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+                                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 255), thickness)
                 t_bounds = (time.perf_counter() - t_start) * 1000
                 t_start = time.perf_counter()
                 if hasattr(self, 'show_excludes') and self.show_excludes and hasattr(self, 'excluded_regions_with_names'):
                     for exclude in self.excluded_regions_with_names:
                         ex1, ey1, ex2, ey2, name = exclude
                         cv2.rectangle(display_frame, (ex1, ey1), (ex2, ey2), (0, 0, 255), 2)
-                        label_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-                        label_y = max(ey1 - 5, label_size[1] + 5)
+                        # Increased font scale and thickness for readability
+                        font_scale = 1.2
+                        thickness = 3
+                        label_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                        label_y = max(ey1 - 10, label_size[1] + 10)
                         cv2.putText(display_frame, name, (ex1, label_y), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), thickness)
                 t_excludes = (time.perf_counter() - t_start) * 1000
                 t_start = time.perf_counter()
                 if self.state_tracking and hasattr(self, 'detected_targets'):

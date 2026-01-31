@@ -863,7 +863,11 @@ class MirrorWindow(QMainWindow):
         # Update display labels
         self.colors_display.setText(str(self.capture.colors_per_target))
         self.pixels_display.setText(str(self.capture.min_blob_pixels))
-        self.blobs_display.setText(str(self.capture.max_blobs) if self.capture.max_blobs > 0 else "∞")
+        # Show '∞' if max_blobs is '-' or 0
+        if str(self.capture.max_blobs) == '-' or self.capture.max_blobs == 0:
+            self.blobs_display.setText("∞")
+        else:
+            self.blobs_display.setText(str(self.capture.max_blobs))
         
         # Update target name (handle text input mode)
         if self.capture.text_input_active:
@@ -1296,10 +1300,19 @@ class MirrorWindow(QMainWindow):
         self.capture.min_blob_pixels = max(self.capture.min_blob_pixels - 1, 1)
     
     def increase_blobs(self):
-        self.capture.max_blobs = min(self.capture.max_blobs + 1, 100)
-    
+        # If currently unlimited ('-'), set to 1
+        if str(self.capture.max_blobs) == '-':
+            self.capture.max_blobs = 1
+        else:
+            self.capture.max_blobs = min(int(self.capture.max_blobs) + 1, 100)
+
     def decrease_blobs(self):
-        self.capture.max_blobs = max(self.capture.max_blobs - 1, 0)
+        # If currently unlimited ('-') or 0, keep as unlimited
+        if str(self.capture.max_blobs) == '-' or self.capture.max_blobs == 0:
+            self.capture.max_blobs = '-'
+        else:
+            new_val = int(self.capture.max_blobs) - 1
+            self.capture.max_blobs = '-' if new_val <= 0 else new_val
     
     def toggle_show_bounds(self, state):
         if not hasattr(self.capture, 'show_bounds'):

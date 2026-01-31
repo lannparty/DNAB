@@ -46,30 +46,59 @@ def save_target(instance):
         print("No colors to save")
         return
     
-    # Create filename
+
+    # Determine if this is an internal target
+    internal_prefixes = ("minimap", "xp", "hit", "miss")
     filename = f"{instance.target_name}.json"
-    filepath = os.path.join(instance.targets_dir, filename)
-    
-    # Convert colors to lists with Python ints
-    colors_list = [[int(c) for c in color] for color, _ in selected_colors]
-    total_pixels = sum(count for _, count in selected_colors)
-    
-    # Save to file
+    if instance.target_name.startswith(internal_prefixes) and hasattr(instance, 'internal_targets_dir'):
+        filepath = os.path.join(instance.internal_targets_dir, filename)
+    else:
+        filepath = os.path.join(instance.targets_dir, filename)
+
+    # Load existing colors if file exists
+    existing_colors = []
+    existing_color_counts = {}
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+                for color in data.get("colors", []):
+                    color_tuple = tuple(color)
+                    existing_colors.append(color_tuple)
+                    existing_color_counts[color_tuple] = existing_color_counts.get(color_tuple, 0) + 1
+        except Exception as e:
+            print(f"Warning: Could not load existing target file for merging: {e}")
+
+    # Merge new and existing colors, summing counts for duplicates
+    merged_color_counts = {}
+    for color, count in selected_colors:
+        merged_color_counts[tuple(color)] = merged_color_counts.get(tuple(color), 0) + count
+    for color in existing_colors:
+        if color not in merged_color_counts:
+            merged_color_counts[color] = 1  # Default count if not present in new selection
+
+    # Sort by count descending, then by color value for stability
+    merged_colors_sorted = sorted(merged_color_counts.items(), key=lambda x: (-x[1], x[0]))
+
+    # Convert to list format for JSON
+    colors_list = [[int(c) for c in color] for color, _ in merged_colors_sorted]
+    total_pixels = sum(count for _, count in merged_colors_sorted)
+
     data = {
         "name": instance.target_name,
         "colors": colors_list,
         "color_count": len(colors_list),
         "pixel_count": total_pixels
     }
-    
+
     try:
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
-        print(f"Saved target '{instance.target_name}' with {len(colors_list)} {mode_text} colors ({total_pixels} total pixels) to {filepath}")
-        for i, (color, count) in enumerate(selected_colors[:10]):  # Show first 10
+        print(f"Saved target '{instance.target_name}' with {len(colors_list)} merged {mode_text} colors ({total_pixels} total pixels) to {filepath}")
+        for i, (color, count) in enumerate(merged_colors_sorted[:10]):  # Show first 10
             print(f"  Color {i+1}: BGR{color} ({count} pixels)")
-        if len(selected_colors) > 10:
-            print(f"  ... and {len(selected_colors) - 10} more")
+        if len(merged_colors_sorted) > 10:
+            print(f"  ... and {len(merged_colors_sorted) - 10} more")
         # Reload all targets to include this new one
         load_all_targets(instance)
     except Exception as e:
@@ -101,17 +130,15 @@ def save_bounds(instance):
     x_min, x_max = min(x1, x2), max(x1, x2)
     y_min, y_max = min(y1, y2), max(y1, y2)
     
-    # Scale back to original coordinates if display is scaled
-    if instance.display_scale != 1.0:
-        scale_factor = 1.0 / instance.display_scale
-        x_min = int(x_min * scale_factor)
-        x_max = int(x_max * scale_factor)
-        y_min = int(y_min * scale_factor)
-        y_max = int(y_max * scale_factor)
+    # Coordinates are already in frame space - no scaling needed (consistent with target selection)
     
     # Create bounds filename
     filename = f"{instance.target_name}.json"
-    filepath = os.path.join(instance.bounds_dir, filename)
+    internal_prefixes = ("minimap", "xp", "hit", "miss")
+    if instance.target_name.startswith(internal_prefixes) and hasattr(instance, 'internal_bounds_dir'):
+        filepath = os.path.join(instance.internal_bounds_dir, filename)
+    else:
+        filepath = os.path.join(instance.bounds_dir, filename)
     
     # Save bounds to file
     data = {
