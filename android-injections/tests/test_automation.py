@@ -245,70 +245,70 @@ class TestPauseAfterTouch:
 class TestStateBasedTargetSwitching:
     """Test state-based target switching logic."""
     
-    def test_target_switches_when_state_changes_and_counter_stable(self):
-        """When game state changes and counter is stable, target should switch."""
+    def test_target_switches_when_state_changes(self):
+        """When game state changes, target should switch immediately."""
         instance = Mock()
         instance.auto_previous_target = "ladder"
         instance.get_current_auto_target.return_value = "zipline"
-        instance.minimap_counter_stable_since = time.time() - 1.5  # Stable for 1.5s
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0  # Requires 1.0s stability
         
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
+        # Simulate state change detection
         current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
+        target_changed = current_target != instance.auto_previous_target
         
-        assert counter_is_stable is True
-        assert should_switch is True
+        assert target_changed is True
         assert current_target == "zipline"
     
-    def test_no_switch_when_state_changes_but_counter_unstable(self):
-        """When game state changes but counter is not stable, target should not switch."""
-        instance = Mock()
-        instance.auto_previous_target = "ladder"
-        instance.get_current_auto_target.return_value = "zipline"
-        instance.minimap_counter_stable_since = time.time() - 0.5  # Only stable for 0.5s
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0  # Requires 1.0s stability
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
-        current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
-        
-        assert counter_is_stable is False
-        assert should_switch is False
-    
     def test_no_switch_when_state_unchanged(self):
-        """When game state stays the same, target should not switch regardless of counter stability."""
+        """When game state stays the same, target should not switch."""
         instance = Mock()
         instance.auto_previous_target = "ladder"
         instance.get_current_auto_target.return_value = "ladder"
-        instance.minimap_counter_stable_since = time.time() - 2.0  # Very stable
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
         
         current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
+        target_changed = current_target != instance.auto_previous_target
         
-        assert counter_is_stable is True
-        assert should_switch is False
+        assert target_changed is False
         assert current_target == "ladder"
+    
+    def test_state_reset_on_target_change(self):
+        """When target changes due to state, auto state should reset."""
+        instance = Mock()
+        instance.auto_previous_target = "ladder"
+        instance.get_current_auto_target.return_value = "zipline"
+        instance.config = Mock()
+        instance.config.touch_delay_mean = 1.0
+        
+        # Before state change
+        instance.auto_touched_time = time.time()
+        instance.auto_target_prev_pos = (100, 100, 50, 50)
+        instance.auto_target_stable_since = time.time()
+        instance.auto_touched_position = (100, 100)
+        instance.auto_dot_prev_pos = (200, 200)
+        instance.auto_dot_stable_since = time.time()
+        instance.last_auto_touch = time.time() - 2.0
+        instance.next_touch_interval = 1.0
+        
+        # Simulate state change detection and reset
+        current_target = instance.get_current_auto_target()
+        if current_target != instance.auto_previous_target:
+            # Reset all auto state
+            instance.auto_touched_time = None
+            instance.auto_target_prev_pos = None
+            instance.auto_target_stable_since = None
+            instance.auto_touched_position = None
+            instance.auto_dot_prev_pos = None
+            instance.auto_dot_stable_since = None
+            instance.last_auto_touch = time.time() - instance.next_touch_interval
+            instance.auto_previous_target = current_target
+        
+        # Verify state was reset
+        assert instance.auto_touched_time is None
+        assert instance.auto_target_prev_pos is None
+        assert instance.auto_target_stable_since is None
+        assert instance.auto_touched_position is None
+        assert instance.auto_dot_prev_pos is None
+        assert instance.auto_dot_stable_since is None
+        assert instance.auto_previous_target == "zipline"
 
 
 class TestMinimapCounterStability:
@@ -359,121 +359,3 @@ class TestMinimapCounterStability:
         
         assert centroids_changed is False
         assert total_movement == 8  # 4 + 4
-
-
-class TestStateBasedTargetSwitching:
-    """Test state-based target switching logic."""
-    
-    def test_target_switches_when_state_changes_and_counter_stable(self):
-        """When game state changes and counter is stable, target should switch."""
-        instance = Mock()
-        instance.auto_previous_target = "ladder"
-        instance.get_current_auto_target.return_value = "zipline"
-        instance.minimap_counter_stable_since = time.time() - 1.5  # Stable for 1.5s
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0  # Requires 1.0s stability
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
-        current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
-        
-        assert counter_is_stable is True
-        assert should_switch is True
-        assert current_target == "zipline"
-    
-    def test_no_switch_when_state_changes_but_counter_unstable(self):
-        """When game state changes but counter is not stable, target should not switch."""
-        instance = Mock()
-        instance.auto_previous_target = "ladder"
-        instance.get_current_auto_target.return_value = "zipline"
-        instance.minimap_counter_stable_since = time.time() - 0.5  # Only stable for 0.5s
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0  # Requires 1.0s stability
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
-        current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
-        
-        assert counter_is_stable is False
-        assert should_switch is False
-    
-    def test_no_switch_when_state_unchanged(self):
-        """When game state stays the same, target should not switch regardless of counter stability."""
-        instance = Mock()
-        instance.auto_previous_target = "ladder"
-        instance.get_current_auto_target.return_value = "ladder"
-        instance.minimap_counter_stable_since = time.time() - 2.0  # Very stable
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
-        current_target = instance.get_current_auto_target()
-        should_switch = (current_target != instance.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable)
-        
-        assert counter_is_stable is True
-        assert should_switch is False
-        assert current_target == "ladder"
-    
-    def test_state_reset_on_target_change(self):
-        """When target changes due to stable state change, auto state should reset."""
-        instance = Mock()
-        instance.auto_previous_target = "ladder"
-        instance.get_current_auto_target.return_value = "zipline"
-        instance.minimap_counter_stable_since = time.time() - 1.5  # Stable
-        instance.config = Mock()
-        instance.config.stability_timer = 1.0
-        instance.config.touch_delay_mean = 1.0
-        
-        current_time = time.time()
-        counter_stable_duration = current_time - instance.minimap_counter_stable_since
-        counter_is_stable = counter_stable_duration >= instance.config.stability_timer
-        
-        # Before state change
-        instance.auto_touched_time = time.time()
-        instance.auto_target_prev_pos = (100, 100, 50, 50)
-        instance.auto_target_stable_since = time.time()
-        instance.auto_touched_position = (100, 100)
-        instance.auto_dot_prev_pos = (200, 200)
-        instance.auto_dot_stable_since = time.time()
-        instance.last_auto_touch = time.time() - 2.0
-        instance.next_touch_interval = 1.0
-        
-        # Simulate state change detection and reset
-        current_target = instance.get_current_auto_target()
-        if (current_target != instance.auto_previous_target and 
-            current_target is not None and 
-            counter_is_stable):
-            # Reset all auto state
-            instance.auto_touched_time = None
-            instance.auto_target_prev_pos = None
-            instance.auto_target_stable_since = None
-            instance.auto_touched_position = None
-            instance.auto_dot_prev_pos = None
-            instance.auto_dot_stable_since = None
-            instance.last_auto_touch = current_time - instance.next_touch_interval
-            instance.auto_previous_target = current_target
-        
-        # Verify state was reset
-        assert counter_is_stable is True
-        assert instance.auto_touched_time is None
-        assert instance.auto_target_prev_pos is None
-        assert instance.auto_target_stable_since is None
-        assert instance.auto_touched_position is None
-        assert instance.auto_dot_prev_pos is None
-        assert instance.auto_dot_stable_since is None
-        assert instance.auto_previous_target == "zipline"

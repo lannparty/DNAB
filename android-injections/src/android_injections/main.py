@@ -1306,17 +1306,8 @@ class WindowCapture:
                     print(f"[AUTO] Current target: {current_target}, Detected: {list(self.detected_targets.keys()) if self.detected_targets else 'none'}")
                     
                     # Check if target has changed due to state change
-                    # Only switch if minimap counter is stable (to prevent rapid switching on noisy data)
-                    counter_stable_duration = 0
-                    if hasattr(self, 'minimap_counter_stable_since') and self.minimap_counter_stable_since is not None:
-                        counter_stable_duration = current_time - self.minimap_counter_stable_since
-                    
-                    counter_is_stable = counter_stable_duration >= self.config.stability_timer
-                    
-                    if (current_target != self.auto_previous_target and 
-                        current_target is not None and 
-                        counter_is_stable):
-                        print(f"[Auto] State changed and counter stable, switching to new target: '{current_target}' (was '{self.auto_previous_target}')")
+                    if current_target != self.auto_previous_target and current_target is not None:
+                        print(f"[Auto] State changed, switching to new target: '{current_target}' (was '{self.auto_previous_target}')")
                         # Reset all auto state for the new target
                         self.auto_touched_time = None
                         self.auto_target_prev_pos = None
@@ -1327,9 +1318,6 @@ class WindowCapture:
                         # Reset touch cooldown so we can touch immediately
                         self.last_auto_touch = current_time - self.next_touch_interval
                         self.auto_previous_target = current_target
-                    elif current_target != self.auto_previous_target and current_target is not None and not counter_is_stable:
-                        print(f"[Auto] State changed but counter not stable yet ({counter_stable_duration:.1f}s/{self.config.stability_timer}s), waiting...")
-                        # Don't switch target yet, counter needs to stabilize
                     
                     if current_target:
                         
